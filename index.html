@@ -9,7 +9,9 @@
     body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;line-height:1.6}
     a{color:#ef7a14;text-decoration:none}
     header{background:#121d2e;border-bottom:1px solid #243347;padding:16px 32px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
-    .brand{font-size:18px;font-weight:700}.brand span{color:#ef7a14}
+    .brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700}
+    .brand img{height:36px;width:auto}
+    .brand span{color:#ef7a14}
     nav a{margin-left:18px;color:#8fa4bc;font-size:14px}
     nav a:hover{color:#ef7a14}
     .user-bar{display:flex;align-items:center;gap:10px;font-size:14px}
@@ -23,13 +25,16 @@
     .hero p{color:#8fa4bc;margin-bottom:24px}
     .btn{display:inline-block;padding:12px 20px;border-radius:10px;font-weight:700;cursor:pointer;border:none;font-size:15px;margin-right:10px}
     .btn-discord{background:#5865F2;color:#fff}
-    .hero-img{background:#162233;border:1px solid #243347;border-radius:20px;height:320px;display:flex;align-items:center;justify-content:center;color:#3d566e}
+    .hero-img{border-radius:20px;overflow:hidden;height:320px;display:flex;align-items:center;justify-content:center}
+    .hero-img img{width:100%;height:100%;object-fit:cover;border-radius:20px}
     .section{max-width:1100px;margin:48px auto;padding:0 24px}
     .section h2{font-size:22px;margin-bottom:18px;color:#ef7a14}
     .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-    .card{background:#162233;border:1px solid #243347;border-radius:16px;padding:22px}
-    .card h3{margin-bottom:8px;font-size:16px}
-    .card p{color:#7a94ad;font-size:14px}
+    .card{background:#162233;border:1px solid #243347;border-radius:16px;overflow:hidden}
+    .card-img{width:100%;height:160px;object-fit:cover;display:block}
+    .card-body{padding:18px}
+    .card-body h3{margin-bottom:8px;font-size:16px}
+    .card-body p{color:#7a94ad;font-size:14px}
     .event-list{display:grid;gap:14px}
     .event-card{background:#162233;border:1px solid #243347;border-radius:14px;padding:18px;display:flex;justify-content:space-between;align-items:center;gap:16px}
     .event-card h3{font-size:15px;margin-bottom:4px}
@@ -53,7 +58,10 @@
 </head>
 <body>
 <header>
-  <div class="brand">Mezőkovácsházi <span>&nbsp;Mérnökség</span></div>
+  <div class="brand">
+    <img src="assets/sarokLogo.png" alt="MK logo">
+    Mezőkovácsházi <span>&nbsp;Mérnökség</span>
+  </div>
   <nav>
     <a href="#napik">Események</a>
     <a href="#rolunk">Rólunk</a>
@@ -69,7 +77,7 @@
   <div>
     <div style="display:inline-block;background:#2c1e0e;color:#ffb86c;padding:5px 12px;border-radius:999px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px">RP szerverhez</div>
     <h1>Mezőkovácsházi<br><span>Mérnökség</span></h1>
-    <p>Napi útzarások, tobörzés és foglalások egy helyen.</p>
+    <p>Napi útzárások, toborzás és foglalások egy helyen.</p>
     <div id="loginButtons">
       <a href="#" id="discordLoginBtn" class="btn btn-discord">👤 Belépés Discorddal</a>
     </div>
@@ -78,7 +86,9 @@
       <span id="adminTag" style="display:none" class="admin-badge">&nbsp;ADMIN&nbsp;</span>
     </div>
   </div>
-  <div class="hero-img">Kép hamarosan 🚧</div>
+  <div class="hero-img">
+    <img src="assets/innovacio.png" alt="Innováció">
+  </div>
 </section>
 
 <section class="section" id="napik">
@@ -89,9 +99,27 @@
 <section class="section" id="rolunk">
   <h2>Rólunk</h2>
   <div class="cards">
-    <div class="card"><h3>Közútkezelés</h3><p>Útfenntartás, burkolatjavítás és forgalomterelés a Mezőkovácsházi körzetben.</p></div>
-    <div class="card"><h3>Tobörzés</h3><p>Rendszeres tobörzési napok és Google Meet alapú felvételi elbeszélgetések.</p></div>
-    <div class="card" style="cursor:pointer" onclick="window.location.href='chat.html'"><h3>💬 Segítség / Chat</h3><p>Kérdésed van? Írj nekünk a chat felületen, hamarosan válaszolunk.</p></div>
+    <div class="card">
+      <img class="card-img" src="assets/csapatmunka.png" alt="Csapatmunka">
+      <div class="card-body">
+        <h3>Csapatmunka</h3>
+        <p>Útfenntartás, burkolatjavítás és forgalomterelés a Mezőkovácsházi körzetben.</p>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card-img" src="assets/szaktudás.png" alt="Szaktudás">
+      <div class="card-body">
+        <h3>Szaktudás</h3>
+        <p>Rendszeres toborzási napok és Google Meet alapú felvételi elbeszélgetések.</p>
+      </div>
+    </div>
+    <div class="card" style="cursor:pointer" onclick="window.location.href='chat.html'">
+      <img class="card-img" src="assets/innovacio.png" alt="Innováció" style="filter:brightness(0.7)">
+      <div class="card-body">
+        <h3>💬 Segítség / Chat</h3>
+        <p>Kérdésed van? Írj nekünk a chat felületen, hamarosan válaszolunk.</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -108,7 +136,10 @@
 <div class="chat-float"><a href="chat.html">💬 Segítség</a></div>
 
 <footer>
-  <span>Mezőkovácsházi Mérnökség &copy; 2026</span>
+  <div style="display:flex;align-items:center;gap:10px">
+    <img src="assets/sarokLogo.png" alt="logo" style="height:28px;opacity:.7">
+    <span>Mezőkovácsházi Mérnökség &copy; 2026</span>
+  </div>
   <div>
     <a href="terms.html">Felhasználási feltételek</a>
     <a href="privacy.html">Adatvédelmi tájékoztató</a>
@@ -146,16 +177,15 @@
     const bar = document.getElementById('userBar');
     const avatar = currentUser.avatar
       ? `<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="">` : '';
-    // Admin gomb CSAK adminnak jelenik meg
-    const adminBtn = currentUser.isAdmin
-      ? `<a href="admin.html" class="admin-btn">🔧 Admin</a>` : '';
-    bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>${adminBtn}`;
+    const adminBtn = (currentUser.isAdmin || currentUser.isSupervisor)
+      ? `<a href="admin.html" class="admin-btn">${currentUser.isAdmin ? '🔧 Admin' : '👤 Supervisor'}</a>` : '';
+    bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : currentUser.isSupervisor ? '<span class="admin-badge" style="background:#3b82f6">SV</span>' : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>${adminBtn}`;
     document.getElementById('loginButtons').style.display = 'none';
     document.getElementById('welcomeBox').style.display = 'block';
     document.getElementById('welcomeName').textContent = currentUser.username;
     if (currentUser.isAdmin) document.getElementById('adminTag').style.display = 'inline';
     document.getElementById('jelentkezesContent').innerHTML =
-      `<div class="card" style="max-width:560px"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Válassz egy eseményt fenn a listából és kattints a Jelentkezem gombra.</p></div>`;
+      `<div class="card"><div class="card-body"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Válassz egy eseményt fenn a listából és kattints a Jelentkezem gombra.</p></div></div>`;
   }
 
   async function loadTodayEvents() {
