@@ -54,7 +54,6 @@
     footer{background:#0c1422;border-top:1px solid #1a2c42;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:48px;font-size:13px;color:#4a6580}
     footer a{color:#4a6580;margin-left:16px}
     footer a:hover{color:#ef7a14}
-    /* bővítő szekciók */
     .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
     .info-box{background:#162233;border:1px solid #243347;border-radius:14px;padding:24px}
     .info-box h3{font-size:16px;margin-bottom:10px;color:#ef7a14}
@@ -69,6 +68,8 @@
     .step-num{font-size:28px;font-weight:900;color:#ef7a14;margin-bottom:8px}
     .step-box h4{font-size:14px;font-weight:700;margin-bottom:6px}
     .step-box p{font-size:13px;color:#7a94ad}
+    .card-link{cursor:pointer;transition:.15s}
+    .card-link:hover{border-color:#ef7a14;transform:translateY(-2px)}
     @media(max-width:800px){.hero,.cards,.info-grid,.step-row{grid-template-columns:1fr}}
   </style>
 </head>
@@ -88,7 +89,7 @@
 
 <section class="hero">
   <div>
-    <div style="display:inline-block;background:#2c1e0e;color:#ffb86c;padding:5px 12px;border-radius:999px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px">RP szerverhez</div>
+    <div style="display:inline-block;background:#2c1e0e;color:#ffb86c;padding:5px 12px;border-radius:999px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px">Mezőkovácsháza</div>
     <h1>Mezőkovácsházi<br><span>Mérnökség</span></h1>
     <p>Napi útzárások, toborzás és foglalások egy helyen.</p>
     <div id="loginButtons">
@@ -112,21 +113,21 @@
 <section class="section" id="rolunk">
   <h2>Rólunk</h2>
   <div class="cards">
-    <div class="card">
+    <div class="card card-link" onclick="document.getElementById('csapatmunka-szekció').scrollIntoView({behavior:'smooth'})"> 
       <img class="card-img" src="assets/csapatmunka.png" alt="Csapatmunka">
       <div class="card-body">
         <h3>Csapatmunka</h3>
         <p>Együtt dolgozunk az utakon – legyen szó zárásról, javításról vagy forgalomszervezésről.</p>
       </div>
     </div>
-    <div class="card">
+    <div class="card card-link" onclick="document.getElementById('szaktudas-szekció').scrollIntoView({behavior:'smooth'})">
       <img class="card-img" src="assets/szaktudás.png" alt="Szaktudás">
       <div class="card-body">
         <h3>Szaktudás</h3>
         <p>Belső oktatások és rendszeres toborzási napok – folyamatosan fejlődünk és bővítjük a csapatot.</p>
       </div>
     </div>
-    <div class="card" style="cursor:pointer" onclick="window.location.href='chat.html'">
+    <div class="card card-link" onclick="window.location.href='chat.html'">
       <img class="card-img" src="assets/Utinfo.png" alt="Segítség / Chat">
       <div class="card-body">
         <h3>💬 Segítség / Chat</h3>
@@ -136,9 +137,9 @@
   </div>
 
   <!-- CSAPATMUNKA szekció -->
-  <h2 style="margin-top:56px">🚧 Csapatmunka</h2>
+  <h2 id="csapatmunka-szekció" style="margin-top:56px;scroll-margin-top:80px">🚧 Csapatmunka</h2>
   <div class="highlight-bar">
-    <p>A Mezőkovácsházi Mérnökség feladata az RP szerveren belül az útviszonyok biztonságos fenntartása. Csapatértékünk az összehangolt munka: minden tag tudja a feladatát, és mindenki számíthat a másikra.</p>
+    <p>A Mezőkovácsházi Mérnökség feladata az útviszonyok biztonságos fenntartása. Csapatértékünk az összehangolt munka: minden tag tudja a feladatát, és mindenki számíthat a másikra.</p>
   </div>
   <div class="info-grid">
     <div class="info-box">
@@ -162,7 +163,7 @@
   </div>
 
   <!-- SZAKTUDÁS szekció -->
-  <h2 style="margin-top:56px">🎓 Szaktudás és fejlődés</h2>
+  <h2 id="szaktudas-szekció" style="margin-top:56px;scroll-margin-top:80px">🎓 Szaktudás és fejlődés</h2>
   <div class="highlight-bar">
     <p>Nem elégénk meg az alapszinttel. A Mérnökség belső oktatási rendszerével minden tag lehetőséget kap arra, hogy mélyítse tudását – akár a gépek kezelésében, akár a forgalomszervezésben vagy a supervisori feladatokban.</p>
   </div>
@@ -180,7 +181,7 @@
     <div class="step-box">
       <div class="step-num">03</div>
       <h4>Supervisor út</h4>
-      <p>A legaktívabb tagok supervisor képzésen vehetnek részt, és irányító szerepet tölthetnek be a szérben.</p>
+      <p>A legaktívabb tagok supervisor képzésen vehetnek részt és irányító szerepet tölthetnek be.</p>
     </div>
   </div>
   <div class="info-grid" style="margin-top:18px">
