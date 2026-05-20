@@ -2,11 +2,14 @@
 // Mezőkovácsházi Mérnökség - Full Worker Backend
 // Bindings: DB (D1)
 // Vars: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, REDIRECT_URI, JWT_SECRET
-//       DISCORD_WEBHOOK (opcionális, értesítőkhez)
 // =============================================
 
 const ADMINS = ['daniell5818'];
-const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
+
+// Webhook: Új esemény / törlés hirdetése
+const WEBHOOK_EVENTS = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
+// Webhook: Ki jelentkezett
+const WEBHOOK_BOOKINGS = 'https://discord.com/api/webhooks/1506768409038426144/55NhExpjToN7nj5ScGAsRT6mp-2b41c2OMQYhpGmpM01QuXgU8789xtXQwHbHoIW8k9j';
 
 const CORS = {
   'Access-Control-Allow-Origin': 'https://gekox23.github.io',
@@ -21,19 +24,9 @@ function jsonRes(data, status = 200) {
   });
 }
 
-async function sendDiscordWebhook(content) {
+async function sendEmbed(webhookUrl, embed) {
   try {
-    await fetch(DISCORD_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    });
-  } catch (_) {}
-}
-
-async function sendDiscordEmbed(embed) {
-  try {
-    await fetch(DISCORD_WEBHOOK, {
+    await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ embeds: [embed] }),
@@ -44,7 +37,6 @@ async function sendDiscordEmbed(embed) {
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-
     try {
       await initDB(env);
       const url = new URL(request.url);
@@ -74,7 +66,6 @@ async function initDB(env) {
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, user_id TEXT, email TEXT, username TEXT, created_at INTEGER)').run();
 }
 
-// ---- Admin: list users ----
 async function handleAdminUsers(request, env) {
   const user = await authUser(request, env);
   if (!user || !user.isAdmin) return jsonRes({ error: 'Forbidden' }, 403);
@@ -82,7 +73,6 @@ async function handleAdminUsers(request, env) {
   return jsonRes(rows.results);
 }
 
-// ---- Admin: delete event ----
 async function handleDeleteEvent(request, env) {
   if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
   const user = await authUser(request, env);
@@ -94,7 +84,7 @@ async function handleDeleteEvent(request, env) {
   await env.DB.prepare('DELETE FROM bookings WHERE event_id=?1').bind(event_id).run();
   await env.DB.prepare('DELETE FROM events WHERE id=?1').bind(event_id).run();
   if (ev) {
-    await sendDiscordEmbed({
+    await sendEmbed(WEBHOOK_EVENTS, {
       title: '🗑️ Esemény törölve',
       description: `**${ev.title}** eseményt törölte: **${user.username}**`,
       color: 0xe74c3c,
@@ -104,13 +94,11 @@ async function handleDeleteEvent(request, env) {
   return jsonRes({ ok: true });
 }
 
-// ---- GET /events ----
 async function handleGetEvents(request, env) {
   const rows = await env.DB.prepare('SELECT * FROM events ORDER BY start_time ASC').all();
   return jsonRes(rows.results);
 }
 
-// ---- POST /event/create (admin only) ----
 async function handleCreateEvent(request, env) {
   if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
   const user = await authUser(request, env);
@@ -124,18 +112,24 @@ async function handleCreateEvent(request, env) {
 
   const startStr = new Date(start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
   const endStr   = new Date(end_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-  const typeLabel = type === 'toborzas' ? '🎮 Tobörzés' : type === 'foglalas' ? '📅 Időpontfoglalás' : '🚧 Útzarás / infó';
-  const bookUrl = `https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}`;
+  const typeLabel = type === 'toborzas' ? '🎮 Tobورزás' : type === 'foglalas' ? '📅 Időpontfoglalás' : '🚧 Napi infó';
+  const color = type === 'toborzas' ? 0xef7a14 : type === 'foglalas' ? 0x22c55e : 0x3b82f6;
 
-  await sendDiscordEmbed({
+  // Toborzas + foglalas: link a jelenetkezeshez; lezaras/napi info: link a weboldalhoz
+  const linkUrl = (type === 'lezaras')
+    ? 'https://gekox23.github.io/mk-mernokseg/'
+    : `https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}`;
+  const linkLabel = (type === 'lezaras') ? '🌐 Weboldal megnyitása' : '✅ Jelenetkezem';
+
+  await sendEmbed(WEBHOOK_EVENTS, {
     title: `${typeLabel}: ${title}`,
     description: description || '',
-    color: type === 'toborzas' ? 0xef7a14 : type === 'foglalas' ? 0x22c55e : 0x3b82f6,
+    color,
     fields: [
       { name: '⏰ Kezdés', value: startStr, inline: true },
       { name: '⏳ Vége', value: endStr, inline: true },
       { name: '👥 Max. fő', value: max_slots > 0 ? String(max_slots) : 'Korlátlan', inline: true },
-      { name: '🔗 Jelentkezés', value: `[Kattints ide](${bookUrl})` },
+      { name: '🔗 Link', value: `[${linkLabel}](${linkUrl})` },
     ],
     footer: { text: `Létrehozta: ${user.username}` },
     timestamp: new Date().toISOString(),
@@ -144,7 +138,6 @@ async function handleCreateEvent(request, env) {
   return jsonRes({ ok: true, id });
 }
 
-// ---- POST /event/book ----
 async function handleBookSlot(request, env) {
   if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
   const user = await authUser(request, env);
@@ -164,7 +157,7 @@ async function handleBookSlot(request, env) {
     .bind(event_id, user.id, user.email || '', user.username, Date.now()).run();
 
   const startStr = new Date(event.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-  await sendDiscordEmbed({
+  await sendEmbed(WEBHOOK_BOOKINGS, {
     title: '✅ Új jelentkezés',
     description: `**${user.username}** jelentkezett erre: **${event.title}**`,
     color: 0x22c55e,
@@ -178,7 +171,6 @@ async function handleBookSlot(request, env) {
   return jsonRes({ ok: true });
 }
 
-// ---- GET /event/unsubscribe ----
 async function handleUnsubscribe(request, env) {
   const url = new URL(request.url);
   const email = url.searchParams.get('email');
@@ -187,7 +179,6 @@ async function handleUnsubscribe(request, env) {
   return new Response('<html><body style="font-family:Arial;background:#0f1826;color:#dce8f5;display:flex;align-items:center;justify-content:center;height:100vh"><h2>✅ Sikeresen leiratkoztál az értesítőkről.</h2></body></html>', { headers: { 'Content-Type': 'text/html', ...CORS } });
 }
 
-// ---- Discord OAuth callback ----
 async function handleDiscordCallback(url, request, env) {
   const code = url.searchParams.get('code');
   if (!code) return jsonRes({ error: 'Missing code' }, 400);

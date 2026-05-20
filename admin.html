@@ -22,11 +22,13 @@
     .btn{padding:11px 22px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer}
     .btn-primary{background:#ef7a14;color:#fff;margin-top:14px;width:100%}
     .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-danger{background:#7f1d1d;color:#fca5a5;padding:5px 12px;border-radius:7px;border:none;font-size:12px;cursor:pointer;font-weight:700}
+    .btn-danger:hover{background:#991b1b}
     .msg{border-radius:10px;padding:12px 16px;font-size:14px;margin-top:12px;display:none;line-height:1.5}
     .msg-ok{background:#0d2b1e;border:1px solid #166534;color:#86efac}
     .msg-err{background:#2c1215;border:1px solid #5c1a1a;color:#f87171}
     .msg-loading{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc}
-    .spinner{display:inline-block;width:14px;height:14px;border:2px solid:#8fa4bc;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid #8fa4bc;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
     @keyframes spin{to{transform:rotate(360deg)}}
     table{width:100%;border-collapse:collapse;font-size:13px}
     th{text-align:left;padding:8px 10px;color:#8fa4bc;border-bottom:1px solid #243347}
@@ -49,7 +51,6 @@
   </div>
 </header>
 
-<!-- Fontos: alapértelmezetten látszódjon a tartalom, csak JS-ben rejtsük el ha nem admin -->
 <div class="container" id="mainContent">
   <h2>🔧 Admin Panel</h2>
 
@@ -57,12 +58,12 @@
     <h3>📅 Új esemény létrehozása</h3>
     <label>Ésemény típusa</label>
     <select id="evType">
-      <option value="toborzas">🎮 Tobörzés – mindenki kap email értesítőt</option>
-      <option value="foglalas">📅 Időpontfoglalás – egyedi jelenkezés</option>
-      <option value="lezaras">🚧 Útzarás / napi infó</option>
+      <option value="toborzas">🎮 Tobورزás – Discord értesítőt küld</option>
+      <option value="foglalas">📅 Időpontfoglalás – egyedi jelentkezés</option>
+      <option value="lezaras">🚧 Napi infó / útzarás</option>
     </select>
     <label>Cím *</label>
-    <input type="text" id="evTitle" placeholder="pl. Tobörzési nap – június 1.">
+    <input type="text" id="evTitle" placeholder="pl. Tobورزási nap – június 1.">
     <label>Leírás</label>
     <textarea id="evDesc" placeholder="Részletek, tudnivalók..."></textarea>
     <div class="row">
@@ -78,8 +79,8 @@
   <div class="panel">
     <h3>📊 Események</h3>
     <table>
-      <thead><tr><th>Cím</th><th>Típus</th><th>Időpont</th><th>Link</th></tr></thead>
-      <tbody id="eventsTable"><tr><td colspan="4" style="color:#4a6580">Betöltés...</td></tr></tbody>
+      <thead><tr><th>Cím</th><th>Típus</th><th>Időpont</th><th>Link</th><th>Törlés</th></tr></thead>
+      <tbody id="eventsTable"><tr><td colspan="5" style="color:#4a6580">Betöltés...</td></tr></tbody>
     </table>
   </div>
 
@@ -112,10 +113,9 @@
   function hideMsg() { document.getElementById('createMsg').style.display = 'none'; }
 
   async function init() {
-    // Ha nincs token: marad az oldal, de piros üzenet, gomb letiltva
     if (!token) {
       document.getElementById('createBtn').disabled = true;
-      showMsg('err', '❌ Nem vagy bejelentkezve. Lépj be a főoldalon Discorddal, majd gyere vissza az admin panelre.');
+      showMsg('err', '❌ Nem vagy bejelentkezve. Lépj be a főoldalon Discorddal, majd gyére vissza.');
       return;
     }
     showMsg('loading', '<span class="spinner"></span> Jogosultság ellenőrzése...');
@@ -123,25 +123,21 @@
       const res = await fetch(WORKER + '/me', { headers: { Authorization: 'Bearer ' + token } });
       if (!res.ok) {
         document.getElementById('createBtn').disabled = true;
-        showMsg('err', '❌ A bejelentkezés lejárt vagy érvénytelen. Lépj ki a főoldalon és jelentkezz be újra.');
+        showMsg('err', '❌ A bejelentekzés lejárt. Lépj ki és jelentkezz be újra.');
         return;
       }
       user = await res.json();
     } catch(e) {
-      showMsg('err', '⚠️ Nem sikerült csatlakozni a szerverhez. Ellenőrizd az internetkapcsolatot!');
+      showMsg('err', '⚠️ Nem sikerült csatlakozni a szerverhez.');
       return;
     }
     hideMsg();
-
-    // Ha nem admin: elrejtjük a panelt, megjelenik a no-access blokk
     if (!user.isAdmin) {
       document.getElementById('mainContent').style.display = 'none';
       document.getElementById('noAccess').style.display = 'flex';
       return;
     }
-
     document.getElementById('adminName').textContent = '👤 ' + user.username;
-    document.getElementById('mainContent').style.display = 'block';
     loadEvents();
     loadUsers();
   }
@@ -149,25 +145,18 @@
   async function handleCreateEvent() {
     const btn = document.getElementById('createBtn');
     hideMsg();
-
     const title = document.getElementById('evTitle').value.trim();
-    const desc = document.getElementById('evDesc').value.trim();
-    const type = document.getElementById('evType').value;
+    const desc  = document.getElementById('evDesc').value.trim();
+    const type  = document.getElementById('evType').value;
     const start = document.getElementById('evStart').value;
-    const end = document.getElementById('evEnd').value;
+    const end   = document.getElementById('evEnd').value;
     const slots = parseInt(document.getElementById('evSlots').value) || 0;
-
     if (!title) { showMsg('err', '❌ Hiányzó mező: <b>Cím</b> kötelező!'); return; }
     if (!start) { showMsg('err', '❌ Hiányzó mező: <b>Kezdés időpontja</b> kötelező!'); return; }
-    if (!end) { showMsg('err', '❌ Hiányzó mező: <b>Vége időpontja</b> kötelező!'); return; }
-    if (new Date(end) <= new Date(start)) { showMsg('err', '❌ A <b>vége időpont</b> nem lehet korábbi mint a kezdés!'); return; }
-
-    if (!token) { showMsg('err', '❌ Nincs érvényes bejelentkezés.'); return; }
-
+    if (!end)   { showMsg('err', '❌ Hiányzó mező: <b>Vége időpontja</b> kötelező!'); return; }
+    if (new Date(end) <= new Date(start)) { showMsg('err', '❌ A vége nem lehet korábbi mint a kezdés!'); return; }
     btn.disabled = true;
-    const isToborzas = type === 'toborzas';
-    showMsg('loading', `<span class="spinner"></span> ${isToborzas ? 'Esemény létrehozása és emailek küldése...' : 'Esemény létrehozása...'}`);
-
+    showMsg('loading', '<span class="spinner"></span> Esemény létrehozása...');
     try {
       const res = await fetch(WORKER + '/event/create', {
         method: 'POST',
@@ -175,26 +164,31 @@
         body: JSON.stringify({ title, description: desc, type, start_time: new Date(start).getTime(), end_time: new Date(end).getTime(), max_slots: slots })
       });
       const data = await res.json();
-      if (!res.ok) {
-        const msg = data.error || 'Ismeretlen hiba történt';
-        showMsg('err', `❌ <b>Hiba:</b> ${msg}`);
-      } else {
-        if (isToborzas) {
-          showMsg('ok', `✅ <b>Tobörzés létrehozva!</b><br>Email értesítő elküldve minden regisztrált felhasználónak.<br><small style="color:#86efac">Esemény ID: ${data.id}</small>`);
-        } else {
-          showMsg('ok', `✅ <b>Esemény létrehozva!</b><br>Az esemény megjelenik a főoldalon.`);
-        }
-        document.getElementById('evTitle').value = '';
-        document.getElementById('evDesc').value = '';
-        document.getElementById('evStart').value = '';
-        document.getElementById('evEnd').value = '';
+      if (!res.ok) { showMsg('err', `❌ ${data.error || 'Ismeretlen hiba'}`); }
+      else {
+        showMsg('ok', `✅ <b>Esemény létrehozva!</b> Discord értesítő elküldve.`);
+        ['evTitle','evDesc','evStart','evEnd'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('evSlots').value = '0';
         loadEvents();
       }
     } catch(e) {
-      showMsg('err', `❌ <b>Hálózati hiba:</b> Nem sikerült csatlakozni a szerverhez.<br><small>${e.message}</small>`);
+      showMsg('err', `❌ Hálózati hiba: ${e.message}`);
     }
     btn.disabled = false;
+  }
+
+  async function deleteEvent(id, title) {
+    if (!confirm(`Biztosan törölöd ezt az eseményt?\n\"${title}\"`)) return;
+    try {
+      const res = await fetch(WORKER + '/event/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ event_id: id })
+      });
+      const data = await res.json();
+      if (res.ok) loadEvents();
+      else alert('Hiba: ' + (data.error || 'Ismeretlen hiba'));
+    } catch(e) { alert('Hálózati hiba'); }
   }
 
   async function loadEvents() {
@@ -202,15 +196,25 @@
       const res = await fetch(WORKER + '/events');
       const events = await res.json();
       const tbody = document.getElementById('eventsTable');
-      if (!events.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:#4a6580">Nincs esemény</td></tr>'; return; }
+      if (!events.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:#4a6580">Nincs esemény</td></tr>'; return; }
       tbody.innerHTML = events.map(e => {
         const start = new Date(e.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
         const badgeCls = e.type === 'toborzas' ? 'badge-toborzas' : e.type === 'foglalas' ? 'badge-foglalas' : 'badge-lezaras';
-        const typeLabel = e.type === 'toborzas' ? '🎮 Tobörzés' : e.type === 'foglalas' ? '📅 Foglalás' : '🚧 Infó';
-        return `<tr><td>${e.title}</td><td><span class="badge ${badgeCls}">${typeLabel}</span></td><td>${start}</td><td><a href="foglalas.html?event=${e.id}" target="_blank" style="color:#ef7a14">🔗 Link</a></td></tr>`;
+        const typeLabel = e.type === 'toborzas' ? '🎮 Tobورزás' : e.type === 'foglalas' ? '📅 Foglalás' : '🚧 Napi infó';
+        const linkHref = e.type === 'lezaras'
+          ? 'https://gekox23.github.io/mk-mernokseg/'
+          : `foglalas.html?event=${e.id}`;
+        const linkLabel = e.type === 'lezaras' ? '🌐 Weboldal' : '🔗 Link';
+        return `<tr>
+          <td>${e.title}</td>
+          <td><span class="badge ${badgeCls}">${typeLabel}</span></td>
+          <td>${start}</td>
+          <td><a href="${linkHref}" target="_blank" style="color:#ef7a14">${linkLabel}</a></td>
+          <td><button class="btn-danger" onclick="deleteEvent('${e.id}', '${e.title.replace(/'/g, "&apos;")}')">&#x1F5D1; Töröl</button></td>
+        </tr>`;
       }).join('');
     } catch(e) {
-      document.getElementById('eventsTable').innerHTML = '<tr><td colspan="4" style="color:#f87171">Nem sikerült betölteni</td></tr>';
+      document.getElementById('eventsTable').innerHTML = '<tr><td colspan="5" style="color:#f87171">Nem sikerült betölteni</td></tr>';
     }
   }
 
@@ -221,14 +225,13 @@
       const users = await res.json();
       const tbody = document.getElementById('usersTable');
       if (!users.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:#4a6580">Nincs felhasználó</td></tr>'; return; }
-      tbody.innerHTML = users.map(u => `<tr><td>${u.discord_username || '-'}</td><td>${u.email || '<span style="color:#4a6580">nincs</span>'}</td><td>${u.is_admin ? '✅ Admin' : ''}</td><td>${new Date(u.created_at).toLocaleDateString('hu-HU')}</td></tr>`).join('');
+      tbody.innerHTML = users.map(u => `<tr><td>${u.discord_username||'-'}</td><td>${u.email||'<span style="color:#4a6580">nincs</span>'}</td><td>${u.is_admin?'✅ Admin':''}</td><td>${new Date(u.created_at).toLocaleDateString('hu-HU')}</td></tr>`).join('');
     } catch(e) {
       document.getElementById('usersTable').innerHTML = '<tr><td colspan="4" style="color:#f87171">Hálózati hiba</td></tr>';
     }
   }
 
   function logout() { localStorage.removeItem('mk_token'); window.location.href = 'index.html'; }
-
   init();
 </script>
 </body>
