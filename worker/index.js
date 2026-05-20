@@ -6,12 +6,13 @@
 
 const ADMINS = ['daniell5818'];
 
-// Webhook 1: Toborzás és Útinfo kihirdetése
-const WEBHOOK_EVENTS = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
-// Webhook 2: Oktatás kihirdetése
+const WEBHOOK_EVENTS  = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
 const WEBHOOK_OKTATAS = 'https://discord.com/api/webhooks/1506772218556711064/I7nV6_NFGWp0H5mEfq_UHx7ZSTzdopyN_e4re8e-7Ioi6UqXwT4DiwAEkIZCeEmLgcxj';
-// Webhook 3: Log / aktivitás
-const WEBHOOK_LOG = 'https://discord.com/api/webhooks/1506768409038426144/55NhExpjToN7nj5ScGAsRT6mp-2b41c2OMQYhpGmpM01QuXgU8789xtXQwHbHoIW8k9j';
+const WEBHOOK_LOG     = 'https://discord.com/api/webhooks/1506768409038426144/55NhExpjToN7nj5ScGAsRT6mp-2b41c2OMQYhpGmpM01QuXgU8789xtXQwHbHoIW8k9j';
+
+const IMG_TOBORZAS = 'https://raw.githubusercontent.com/Gekox23/mk-mernokseg/main/assets/toborzas.png';
+const IMG_OKTATAS  = 'https://raw.githubusercontent.com/Gekox23/mk-mernokseg/main/assets/OKTATS.png';
+const IMG_UTINFO   = 'https://raw.githubusercontent.com/Gekox23/mk-mernokseg/main/assets/Utinfo.png';
 
 const CORS = {
   'Access-Control-Allow-Origin': 'https://gekox23.github.io',
@@ -123,6 +124,7 @@ async function handleCreateEvent(request, env) {
       title: '🎮 Magyar Közút toborzást hirdetett!',
       description: descBlock,
       color: 0xef7a14,
+      image: { url: IMG_TOBORZAS },
       fields: [
         { name: '⏰ Kezdés', value: startStr, inline: true },
         { name: '⏳ Vége', value: endStr, inline: true },
@@ -137,6 +139,7 @@ async function handleCreateEvent(request, env) {
       title: '📚 Új oktatás került meghirdetésre!',
       description: descBlock,
       color: 0x22c55e,
+      image: { url: IMG_OKTATAS },
       fields: [
         { name: '👤 Oktató', value: title, inline: false },
         { name: '⏰ Kezdés', value: startStr, inline: true },
@@ -152,6 +155,7 @@ async function handleCreateEvent(request, env) {
       title: '🚧 Útinfo',
       description: descBlock,
       color: 0x3b82f6,
+      image: { url: IMG_UTINFO },
       fields: [
         { name: '⏰ Érvényes ettől', value: startStr, inline: true },
         { name: '⏳ Érvényes eddig', value: endStr, inline: true },
