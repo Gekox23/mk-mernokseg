@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Roblox belépés – Mezőkovácsházi Mérnökség</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:16px}
+  </style>
+</head>
+<body>
+  <div>⏳ Roblox azonosítás folyamatban...</div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    if (code) {
+      window.location.href = 'https://mk.gekox1111.workers.dev/callback-roblox?code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state || '');
+    } else {
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>

@@ -3,58 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Roblox összekötés – Mezőkovácsházi Mérnökség</title>
+  <title>Roblox Összekötés – Mezőkovácsházi Mérnökség</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;display:flex;align-items:center;justify-content:center;min-height:100vh}
     .box{background:#162233;border:1px solid #243347;border-radius:20px;padding:36px;max-width:440px;width:100%;text-align:center}
-    h1{font-size:22px;margin-bottom:8px}
-    h1 span{color:#ef7a14}
+    h1{font-size:22px;margin-bottom:8px} h1 span{color:#ef7a14}
     p{color:#8fa4bc;font-size:14px;margin-bottom:24px;line-height:1.6}
-    input{width:100%;padding:12px;border-radius:10px;border:1px solid #2b4668;background:#0f1826;color:#dce8f5;font-size:15px;margin-bottom:14px}
-    .btn{width:100%;padding:13px;border-radius:10px;border:none;font-size:15px;font-weight:700;cursor:pointer;background:#e4000f;color:#fff}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .error{background:#2c1215;border:1px solid #5c1a1a;border-radius:8px;padding:10px;color:#f87171;font-size:13px;margin-bottom:12px;display:none}
-    .success{background:#0d2b1e;border:1px solid #166534;border-radius:8px;padding:10px;color:#86efac;font-size:13px;margin-bottom:12px;display:none}
+    .btn{width:100%;padding:14px;border-radius:12px;border:none;font-size:16px;font-weight:700;cursor:pointer;background:#e4000f;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none}
+    .error{background:#2c1215;border:1px solid #5c1a1a;border-radius:8px;padding:10px;color:#f87171;font-size:13px;margin-bottom:16px;display:none}
   </style>
 </head>
 <body>
 <div class="box">
   <h1>🎮 Roblox <span>Összekötés</span></h1>
-  <p>Beléptél Discorddal! Most add meg a Roblox felhasználóneved, hogy az oldal azonosíthasson a szerveren.</p>
+  <p>Beléptél Discorddal! Most kösd össze a Roblox fiókodat is, hogy azonosítani tudjunk a szerveren.</p>
   <div class="error" id="errBox"></div>
-  <div class="success" id="okBox"></div>
-  <input type="text" id="robloxInput" placeholder="Roblox felhasználónév" autocomplete="off">
-  <button class="btn" id="linkBtn" onclick="linkRoblox()">Összekötés &amp; Belépés</button>
+  <a class="btn" id="robloxBtn" href="#">🎮 Belépés Robloxxal</a>
 </div>
 <script>
   const WORKER_URL = 'https://mk.gekox1111.workers.dev';
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token');
-  if (!token) window.location.href = 'index.html';
+  const error = params.get('error');
 
-  async function linkRoblox() {
-    const roblox = document.getElementById('robloxInput').value.trim();
-    const btn = document.getElementById('linkBtn');
-    const err = document.getElementById('errBox');
-    const ok = document.getElementById('okBox');
-    err.style.display = 'none'; ok.style.display = 'none';
-    if (!roblox) { showErr('Add meg a Roblox felhasználóneved!'); return; }
-    btn.disabled = true; btn.textContent = 'Folyamatban...';
+  if (!token) window.location.href = 'index.html';
+  if (error === 'taken') {
+    document.getElementById('errBox').textContent = 'Ez a Roblox fiók már más Discord fiókhoz van kötve!';
+    document.getElementById('errBox').style.display = 'block';
+  }
+
+  async function init() {
     try {
-      const res = await fetch(WORKER_URL + '/roblox-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ roblox_username: roblox })
+      const res = await fetch(WORKER_URL + '/roblox-auth-url', {
+        headers: { Authorization: 'Bearer ' + token }
       });
       const data = await res.json();
-      if (!res.ok) { showErr(data.error || 'Hiba történt'); btn.disabled = false; btn.textContent = 'Összekötés & Belépés'; return; }
-      ok.textContent = 'Sikeresen összekötve! Irány a főoldal...'; ok.style.display = 'block';
-      localStorage.setItem('mk_token', data.token);
-      setTimeout(() => window.location.href = 'index.html', 1200);
-    } catch(e) { showErr('Hálózati hiba. Próbáld újra.'); btn.disabled = false; btn.textContent = 'Összekötés & Belépés'; }
+      document.getElementById('robloxBtn').href = data.url;
+    } catch(e) {
+      document.getElementById('errBox').textContent = 'Hálózati hiba, próbáld újra.';
+      document.getElementById('errBox').style.display = 'block';
+    }
   }
-  function showErr(msg) { const e = document.getElementById('errBox'); e.textContent = msg; e.style.display = 'block'; }
+  init();
 </script>
 </body>
 </html>
