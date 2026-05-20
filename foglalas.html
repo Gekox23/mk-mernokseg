@@ -63,7 +63,7 @@
       document.getElementById('errBox').style.display = 'block';
       btn.disabled = false; btn.textContent = '✅ Jelentkezem';
     } else {
-      document.getElementById('okBox').innerHTML = '✅ Sikeresen jelentkeztél! Email és Calendar meghívó elküldve.' + (data.calendar_event ? ` <a href="${data.calendar_event}" target="_blank" style="color:#22c55e">Megnyitás</a>` : '');
+      document.getElementById('okBox').textContent = '✅ Sikeresen jelentkeztél!';
       document.getElementById('okBox').style.display = 'block';
       btn.style.display = 'none';
     }

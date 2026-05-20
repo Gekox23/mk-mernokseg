@@ -6,7 +6,7 @@
 
 const ADMINS = ['daniell5818'];
 
-// Webhook 1: Toborzás és Úti tájékoztató kihirdetése
+// Webhook 1: Toborzás és Útinfo kihirdetése
 const WEBHOOK_EVENTS = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
 // Webhook 2: Oktatás kihirdetése
 const WEBHOOK_OKTATAS = 'https://discord.com/api/webhooks/1506772218556711064/I7nV6_NFGWp0H5mEfq_UHx7ZSTzdopyN_e4re8e-7Ioi6UqXwT4DiwAEkIZCeEmLgcxj';
@@ -116,11 +116,7 @@ async function handleCreateEvent(request, env) {
   const endStr   = new Date(end_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
   const bookUrl  = `https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}`;
   const siteUrl  = 'https://gekox23.github.io/mk-mernokseg/';
-
-  // description mező: # cím\nleírás
-  const descBlock = description
-    ? `# ${title}\n${description}`
-    : `# ${title}`;
+  const descBlock = description ? `# ${title}\n${description}` : `# ${title}`;
 
   if (type === 'toborzas') {
     await sendEmbed(WEBHOOK_EVENTS, {
@@ -152,9 +148,8 @@ async function handleCreateEvent(request, env) {
       timestamp: new Date().toISOString(),
     });
   } else {
-    // lezaras / napi info / uti info
     await sendEmbed(WEBHOOK_EVENTS, {
-      title: '🚧 Úti tájékoztatás',
+      title: '🚧 Útinfo',
       description: descBlock,
       color: 0x3b82f6,
       fields: [
