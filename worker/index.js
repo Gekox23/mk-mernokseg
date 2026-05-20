@@ -6,10 +6,10 @@
 
 const ADMINS = ['daniell5818'];
 
-// Webhook: Új esemény / törlés hirdetése
+// Webhook 1: Események kihirdetése (létrehozás, törlés)
 const WEBHOOK_EVENTS = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
-// Webhook: Ki jelentkezett
-const WEBHOOK_BOOKINGS = 'https://discord.com/api/webhooks/1506768409038426144/55NhExpjToN7nj5ScGAsRT6mp-2b41c2OMQYhpGmpM01QuXgU8789xtXQwHbHoIW8k9j';
+// Webhook 2: Log / aktivitás (belépés, jelentkezés, chat)
+const WEBHOOK_LOG = 'https://discord.com/api/webhooks/1506768409038426144/55NhExpjToN7nj5ScGAsRT6mp-2b41c2OMQYhpGmpM01QuXgU8789xtXQwHbHoIW8k9j';
 
 const CORS = {
   'Access-Control-Allow-Origin': 'https://gekox23.github.io',
@@ -84,9 +84,17 @@ async function handleDeleteEvent(request, env) {
   await env.DB.prepare('DELETE FROM bookings WHERE event_id=?1').bind(event_id).run();
   await env.DB.prepare('DELETE FROM events WHERE id=?1').bind(event_id).run();
   if (ev) {
+    // Esemény törlése → WEBHOOK_EVENTS
     await sendEmbed(WEBHOOK_EVENTS, {
       title: '🗑️ Esemény törölve',
       description: `**${ev.title}** eseményt törölte: **${user.username}**`,
+      color: 0xe74c3c,
+      timestamp: new Date().toISOString(),
+    });
+    // Log → WEBHOOK_LOG
+    await sendEmbed(WEBHOOK_LOG, {
+      title: '🗑️ Log: esemény törölve',
+      description: `**${user.username}** törölte: **${ev.title}**`,
       color: 0xe74c3c,
       timestamp: new Date().toISOString(),
     });
@@ -112,15 +120,14 @@ async function handleCreateEvent(request, env) {
 
   const startStr = new Date(start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
   const endStr   = new Date(end_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-  const typeLabel = type === 'toborzas' ? '🎮 Tobورزás' : type === 'foglalas' ? '📅 Időpontfoglalás' : '🚧 Napi infó';
+  const typeLabel = type === 'toborzas' ? '🎮 Tobورzás' : type === 'foglalas' ? '📅 Időpontfoglalás' : '🚧 Napi infó';
   const color = type === 'toborzas' ? 0xef7a14 : type === 'foglalas' ? 0x22c55e : 0x3b82f6;
-
-  // Toborzas + foglalas: link a jelenetkezeshez; lezaras/napi info: link a weboldalhoz
-  const linkUrl = (type === 'lezaras')
+  const linkUrl = type === 'lezaras'
     ? 'https://gekox23.github.io/mk-mernokseg/'
     : `https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}`;
-  const linkLabel = (type === 'lezaras') ? '🌐 Weboldal megnyitása' : '✅ Jelenetkezem';
+  const linkLabel = type === 'lezaras' ? '🌐 Weboldal megnyitása' : '✅ Jelentkezem';
 
+  // Esemény kihirdetése → WEBHOOK_EVENTS
   await sendEmbed(WEBHOOK_EVENTS, {
     title: `${typeLabel}: ${title}`,
     description: description || '',
@@ -132,6 +139,14 @@ async function handleCreateEvent(request, env) {
       { name: '🔗 Link', value: `[${linkLabel}](${linkUrl})` },
     ],
     footer: { text: `Létrehozta: ${user.username}` },
+    timestamp: new Date().toISOString(),
+  });
+
+  // Log → WEBHOOK_LOG
+  await sendEmbed(WEBHOOK_LOG, {
+    title: '📝 Log: új esemény létrehozva',
+    description: `**${user.username}** létrehozta: **${title}** (${typeLabel})`,
+    color: 0x8fa4bc,
     timestamp: new Date().toISOString(),
   });
 
@@ -157,9 +172,10 @@ async function handleBookSlot(request, env) {
     .bind(event_id, user.id, user.email || '', user.username, Date.now()).run();
 
   const startStr = new Date(event.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-  await sendEmbed(WEBHOOK_BOOKINGS, {
-    title: '✅ Új jelentkezés',
-    description: `**${user.username}** jelentkezett erre: **${event.title}**`,
+  // Jelentkezés log → WEBHOOK_LOG
+  await sendEmbed(WEBHOOK_LOG, {
+    title: '✅ Log: új jelentkezés',
+    description: `**${user.username}** jelentkezett: **${event.title}**`,
     color: 0x22c55e,
     fields: [
       { name: '⏰ Időpont', value: startStr, inline: true },
@@ -199,6 +215,14 @@ async function handleDiscordCallback(url, request, env) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1,?2,?3,?4,?5)')
     .bind(dUser.id, 'discord_login', ip, request.headers.get('User-Agent') || '', now).run();
+  // Belépés log → WEBHOOK_LOG
+  await sendEmbed(WEBHOOK_LOG, {
+    title: '🔑 Log: belépés',
+    description: `**${dUser.username}** bejelentkezett Discord-dal`,
+    color: 0x5865f2,
+    fields: [{ name: '📍 IP', value: ip, inline: true }],
+    timestamp: new Date().toISOString(),
+  });
   const payload = { id: dUser.id, discord_id: dUser.id, username: dUser.username, avatar: dUser.avatar, email: dUser.email || null, roblox_username: null, isAdmin, exp: now + 86400000 };
   const token = await signToken(payload, env.JWT_SECRET);
   return Response.redirect(`https://gekox23.github.io/mk-mernokseg/?token=${token}`, 302);
@@ -216,6 +240,14 @@ async function handleLog(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1,?2,?3,?4,?5)')
     .bind(user?.id || 'anonymous', body.action || 'unknown', ip, request.headers.get('User-Agent') || '', Date.now()).run();
+  // Általános log → WEBHOOK_LOG
+  await sendEmbed(WEBHOOK_LOG, {
+    title: '📝 Log: aktivitás',
+    description: `**${user?.username || 'ismeretlen'}** → ${body.action || 'unknown'}`,
+    color: 0x8fa4bc,
+    fields: [{ name: 'IP', value: ip, inline: true }],
+    timestamp: new Date().toISOString(),
+  });
   return jsonRes({ ok: true });
 }
 async function handleChatSend(request, env) {
@@ -229,6 +261,13 @@ async function handleChatSend(request, env) {
     .bind(user.id, user.username, user.avatar || null, msg, Date.now()).run();
   await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1,?2,?3,?4,?5)')
     .bind(user.id, 'chat_send', request.headers.get('CF-Connecting-IP') || 'unknown', request.headers.get('User-Agent') || '', Date.now()).run();
+  // Chat log → WEBHOOK_LOG
+  await sendEmbed(WEBHOOK_LOG, {
+    title: '💬 Log: chat üzenet',
+    description: `**${user.username}**: ${msg.slice(0, 200)}`,
+    color: 0x8fa4bc,
+    timestamp: new Date().toISOString(),
+  });
   return jsonRes({ ok: true });
 }
 async function handleChatMessages(request, env) {
