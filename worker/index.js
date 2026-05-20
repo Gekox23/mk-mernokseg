@@ -12,22 +12,35 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+function jsonRes(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...CORS },
+  });
+}
+
 export default {
   async fetch(request, env) {
-    if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
-    await initDB(env);
-    const url = new URL(request.url);
-    if (url.pathname === '/callback')            return handleDiscordCallback(url, request, env);
-    if (url.pathname === '/me')                  return handleMe(request, env);
-    if (url.pathname === '/log')                 return handleLog(request, env);
-    if (url.pathname === '/chat/send')           return handleChatSend(request, env);
-    if (url.pathname === '/chat/messages')       return handleChatMessages(request, env);
-    if (url.pathname === '/events')              return handleGetEvents(request, env);
-    if (url.pathname === '/event/create')        return handleCreateEvent(request, env);
-    if (url.pathname === '/event/book')          return handleBookSlot(request, env);
-    if (url.pathname === '/event/unsubscribe')   return handleUnsubscribe(request, env);
-    if (url.pathname === '/admin/users')         return handleAdminUsers(request, env);
-    return new Response('MK API OK', { status: 200 });
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+
+    try {
+      await initDB(env);
+      const url = new URL(request.url);
+      if (url.pathname === '/callback')          return handleDiscordCallback(url, request, env);
+      if (url.pathname === '/me')                return handleMe(request, env);
+      if (url.pathname === '/log')               return handleLog(request, env);
+      if (url.pathname === '/chat/send')         return handleChatSend(request, env);
+      if (url.pathname === '/chat/messages')     return handleChatMessages(request, env);
+      if (url.pathname === '/events')            return handleGetEvents(request, env);
+      if (url.pathname === '/event/create')      return handleCreateEvent(request, env);
+      if (url.pathname === '/event/book')        return handleBookSlot(request, env);
+      if (url.pathname === '/event/delete')      return handleDeleteEvent(request, env);
+      if (url.pathname === '/event/unsubscribe') return handleUnsubscribe(request, env);
+      if (url.pathname === '/admin/users')       return handleAdminUsers(request, env);
+      return new Response('MK API OK', { status: 200, headers: CORS });
+    } catch (err) {
+      return jsonRes({ error: 'Internal error', detail: String(err) }, 500);
+    }
   }
 };
 
@@ -45,6 +58,19 @@ async function handleAdminUsers(request, env) {
   if (!user || !user.isAdmin) return jsonRes({ error: 'Forbidden' }, 403);
   const rows = await env.DB.prepare('SELECT id, discord_username, email, is_admin, created_at FROM users ORDER BY created_at DESC').all();
   return jsonRes(rows.results);
+}
+
+// ---- Admin: delete event ----
+async function handleDeleteEvent(request, env) {
+  if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
+  const user = await authUser(request, env);
+  if (!user || !user.isAdmin) return jsonRes({ error: 'Csak admin törölhet eseményt!' }, 403);
+  const body = await request.json();
+  const { event_id } = body;
+  if (!event_id) return jsonRes({ error: 'Hiányzó event_id' }, 400);
+  await env.DB.prepare('DELETE FROM bookings WHERE event_id=?1').bind(event_id).run();
+  await env.DB.prepare('DELETE FROM events WHERE id=?1').bind(event_id).run();
+  return jsonRes({ ok: true });
 }
 
 // ---- Google Auth ----
@@ -181,9 +207,9 @@ async function handleBookSlot(request, env) {
 async function handleUnsubscribe(request, env) {
   const url = new URL(request.url);
   const email = url.searchParams.get('email');
-  if (!email) return new Response('Hiányzó email', { status: 400 });
+  if (!email) return new Response('Hiányzó email', { status: 400, headers: CORS });
   await env.DB.prepare('UPDATE users SET email=NULL WHERE email=?1').bind(email).run();
-  return new Response('<html><body style="font-family:Arial;background:#0f1826;color:#dce8f5;display:flex;align-items:center;justify-content:center;height:100vh"><h2>✅ Sikeresen leiratkoztál az értesítőkről.</h2></body></html>', { headers: { 'Content-Type': 'text/html' } });
+  return new Response('<html><body style="font-family:Arial;background:#0f1826;color:#dce8f5;display:flex;align-items:center;justify-content:center;height:100vh"><h2>✅ Sikeresen leiratkoztál az értesítőkről.</h2></body></html>', { headers: { 'Content-Type': 'text/html', ...CORS } });
 }
 
 // ---- Discord OAuth callback ----
@@ -249,9 +275,6 @@ async function authUser(request, env) {
   const payload = await verifyToken(token, env.JWT_SECRET);
   if (!payload || Date.now() > payload.exp) return null;
   return payload;
-}
-function jsonRes(data, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 async function signToken(payload, secret) {
   const enc = new TextEncoder();
