@@ -12,6 +12,10 @@
     .brand{font-size:18px;font-weight:700}.brand span{color:#ef7a14}
     nav a{margin-left:18px;color:#8fa4bc;font-size:14px}
     nav a:hover{color:#ef7a14}
+    .user-bar{display:flex;align-items:center;gap:10px;font-size:14px}
+    .user-bar img{width:32px;height:32px;border-radius:50%;border:2px solid #5865F2}
+    .admin-badge{background:#ef7a14;color:#fff;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+    .logout-btn{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
     .hero{max-width:1100px;margin:48px auto 0;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
     .hero h1{font-size:36px;line-height:1.1;margin-bottom:16px}
     .hero h1 span{color:#ef7a14}
@@ -31,8 +35,12 @@
     .notice-item:last-child{border-bottom:none}
     .notice-item p{font-size:13px;color:#7a94ad;margin-top:2px}
     .time{background:#2c1e0e;color:#ffb86c;padding:4px 10px;border-radius:999px;font-size:12px;white-space:nowrap}
-    .admin-pill{background:#1a2c42;border:1px solid #2b4668;border-radius:12px;padding:14px 18px;margin-top:20px;font-size:14px;color:#7a94ad}
-    .admin-pill strong{color:#ef7a14}
+    .admin-panel{background:#1a2c42;border:2px solid #ef7a14;border-radius:16px;padding:22px;margin-top:24px;display:none}
+    .admin-panel h3{color:#ef7a14;margin-bottom:12px}
+    .admin-panel input,.admin-panel textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2b4668;background:#0f1826;color:#dce8f5;margin-bottom:10px;font-size:14px}
+    .admin-panel button{background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700}
+    .login-box{background:#162233;border:1px solid #243347;border-radius:16px;padding:24px;text-align:center;max-width:400px}
+    .login-box p{color:#7a94ad;margin-bottom:18px;font-size:14px}
     footer{background:#0c1422;border-top:1px solid #1a2c42;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:48px;font-size:13px;color:#4a6580}
     footer a{color:#4a6580;margin-left:16px}
     footer a:hover{color:#ef7a14}
@@ -49,26 +57,43 @@
     <a href="terms.html">ÁSZF</a>
     <a href="privacy.html">Adatvédelem</a>
   </nav>
+  <div class="user-bar" id="userBar">
+    <!-- filled by JS -->
+  </div>
 </header>
 
 <section class="hero">
   <div>
     <div style="display:inline-block;background:#2c1e0e;color:#ffb86c;padding:5px 12px;border-radius:999px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px">RP szerverhez</div>
     <h1>Mezőkovácsházi<br><span>Mérnökség</span></h1>
-    <p>Napi útzárások, toborzás és foglalások egy helyen. Discord és Roblox belépés hamarosan elérhető.</p>
-    <a href="#" class="btn btn-discord">Belépés Discorddal</a>
-    <a href="#" class="btn btn-roblox">Belépés Robloxxal</a>
-    <div class="admin-pill">Admin: <strong>daniell5818</strong> (Discord) — admin jogosultság automatikusan érvényes belépés után.</div>
+    <p>Napi útzárások, toborzás és foglalások egy helyen.</p>
+    <div id="loginButtons">
+      <a href="#" id="discordLoginBtn" class="btn btn-discord">👤 Belépés Discorddal</a>
+      <a href="#" class="btn btn-roblox">🎮 Belépés Robloxxal</a>
+    </div>
+    <div id="welcomeBox" style="display:none;margin-top:16px;background:#1a2c42;border:1px solid #2b4668;border-radius:12px;padding:14px 18px;font-size:14px;color:#8fa4bc">
+      👋 Üdvözlünk, <strong id="welcomeName"></strong>!
+      <span id="adminTag" style="display:none" class="admin-badge">&nbsp;ADMIN&nbsp;</span>
+    </div>
   </div>
   <div class="hero-img">Kép hamarosan 🚧</div>
 </section>
 
 <section class="section" id="napik">
   <h2>Napi információk</h2>
-  <div class="notice-list">
+  <div class="notice-list" id="noticeList">
     <div class="notice-item"><div><strong>4443 autóút lezárás</strong><p>Burkolatjavítás, félpályás forgalomterelés.</p></div><span class="time">Egész napi</span></div>
     <div class="notice-item"><div><strong>Telephelyi gépátvétel</strong><p>Kiemelt adminisztráció, lassabb ügyfélfogadás.</p></div><span class="time">16:30–18:00</span></div>
     <div class="notice-item"><div><strong>Toborzási nap</strong><p>Új jelentkezők fogadása Google Meet alapon.</p></div><span class="time">18:30–20:00</span></div>
+  </div>
+
+  <!-- Admin panel - only visible for admins -->
+  <div class="admin-panel" id="adminPanel">
+    <h3>🔧 Admin: Új napi hír</h3>
+    <input type="text" id="noticeTitle" placeholder="Cím (pl. 4443 lezárás)">
+    <input type="text" id="noticeTime" placeholder="Idő (pl. Egész napi)">
+    <textarea id="noticeDesc" rows="2" placeholder="Leírás"></textarea>
+    <button onclick="addNotice()">Hír hozzáadása</button>
   </div>
 </section>
 
@@ -83,9 +108,11 @@
 
 <section class="section" id="jelentkezes">
   <h2>Jelentkezés</h2>
-  <div class="card" style="max-width:560px">
-    <h3>Időpontfoglalás — hamarosan</h3>
-    <p style="margin-top:8px;color:#7a94ad">A Google Calendar alapú foglalási rendszer fejlesztés alatt áll. Discord és Roblox belépés után leszel képes időpontot foglalni.</p>
+  <div id="jelentkezesContent">
+    <div class="login-box">
+      <p>Az időpontfoglaláshoz kérjük lépj be Discord fiókoddal.</p>
+      <a href="#" id="discordLoginBtn2" class="btn btn-discord">👤 Belépés Discorddal</a>
+    </div>
   </div>
 </section>
 
@@ -96,5 +123,99 @@
     <a href="privacy.html">Adatvédelmi tájékoztató</a>
   </div>
 </footer>
+
+<script>
+  // ---- CONFIG - UPDATE WORKER URL AFTER CLOUDFLARE DEPLOYMENT ----
+  const WORKER_URL = 'https://YOUR_WORKER.workers.dev';
+  const DISCORD_CLIENT_ID = '1506719802390085778';
+  const REDIRECT_URI = encodeURIComponent('https://gekox23.github.io/mk-mernokseg/callback.html');
+  const DISCORD_OAUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=email+identify`;
+
+  // ---- Auth ----
+  let currentUser = null;
+
+  function getToken() { return localStorage.getItem('mk_token'); }
+  function setToken(t) { localStorage.setItem('mk_token', t); }
+  function clearToken() { localStorage.removeItem('mk_token'); }
+
+  async function checkLogin() {
+    // Check if redirected back with ?token=
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      setToken(token);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    const stored = getToken();
+    if (!stored) return;
+
+    try {
+      const res = await fetch(WORKER_URL + '/me', {
+        headers: { 'Authorization': 'Bearer ' + stored }
+      });
+      if (res.ok) {
+        currentUser = await res.json();
+        renderUser();
+      } else {
+        clearToken();
+      }
+    } catch(e) {
+      console.warn('Worker not yet configured:', e.message);
+    }
+  }
+
+  function renderUser() {
+    if (!currentUser) return;
+    const bar = document.getElementById('userBar');
+    const avatar = currentUser.avatar
+      ? `<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="" />`
+      : '';
+    bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>`;
+
+    document.getElementById('loginButtons').style.display = 'none';
+    document.getElementById('welcomeBox').style.display = 'block';
+    document.getElementById('welcomeName').textContent = currentUser.username;
+    if (currentUser.isAdmin) {
+      document.getElementById('adminTag').style.display = 'inline';
+      document.getElementById('adminPanel').style.display = 'block';
+    }
+
+    // Show booking form for logged in users
+    document.getElementById('jelentkezesContent').innerHTML = `
+      <div class="card" style="max-width:560px">
+        <h3>Időpontfoglalás</h3>
+        <p style="margin-top:8px;color:#7a94ad">Google Calendar alapú foglalási rendszer — hamarosan éles. Addig jelöld magad az IC csatornán.</p>
+      </div>`;
+  }
+
+  function logout() {
+    clearToken();
+    currentUser = null;
+    location.reload();
+  }
+
+  function addNotice() {
+    if (!currentUser || !currentUser.isAdmin) return;
+    const title = document.getElementById('noticeTitle').value.trim();
+    const time = document.getElementById('noticeTime').value.trim();
+    const desc = document.getElementById('noticeDesc').value.trim();
+    if (!title || !time) return alert('Cím és idő kötelező!');
+    const item = document.createElement('div');
+    item.className = 'notice-item';
+    item.innerHTML = `<div><strong>${title}</strong><p>${desc}</p></div><span class="time">${time}</span>`;
+    document.getElementById('noticeList').prepend(item);
+    document.getElementById('noticeTitle').value = '';
+    document.getElementById('noticeTime').value = '';
+    document.getElementById('noticeDesc').value = '';
+  }
+
+  // Set Discord login links
+  document.getElementById('discordLoginBtn').href = DISCORD_OAUTH_URL;
+  document.getElementById('discordLoginBtn2').href = DISCORD_OAUTH_URL;
+
+  // Init
+  checkLogin();
+</script>
 </body>
 </html>
