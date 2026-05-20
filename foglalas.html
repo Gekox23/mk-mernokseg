@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Esemény – Mezőkovácsházi Mérnökség</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .box{background:#162233;border:1px solid #243347;border-radius:20px;padding:36px;max-width:480px;width:100%;text-align:center}
+    h1{font-size:22px;margin-bottom:8px;color:#ef7a14}
+    p{color:#8fa4bc;font-size:14px;margin-bottom:12px;line-height:1.6}
+    .info{background:#0f1826;border-radius:10px;padding:14px;margin-bottom:20px;text-align:left}
+    .btn{width:100%;padding:13px;border-radius:10px;border:none;font-size:15px;font-weight:700;cursor:pointer;background:#22c55e;color:#fff;margin-top:8px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .error{background:#2c1215;border:1px solid #5c1a1a;border-radius:8px;padding:10px;color:#f87171;font-size:13px;margin-bottom:12px;display:none}
+    .success{background:#0d2b1e;border:1px solid #166534;border-radius:8px;padding:12px;color:#86efac;font-size:14px;margin-bottom:12px;display:none}
+  </style>
+</head>
+<body>
+<div class="box">
+  <h1 id="title">Esemény betöltése...</h1>
+  <div class="info" id="info" style="display:none">
+    <p id="desc"></p>
+    <p><b>⏰ Időpont:</b> <span id="time"></span></p>
+  </div>
+  <div class="error" id="errBox"></div>
+  <div class="success" id="okBox"></div>
+  <button class="btn" id="bookBtn" onclick="book()" style="display:none">✅ Jelentkezem</button>
+</div>
+<script>
+  const WORKER = 'https://mk.gekox1111.workers.dev';
+  const params = new URLSearchParams(window.location.search);
+  const eventId = params.get('event');
+  const token = localStorage.getItem('mk_token');
+
+  async function load() {
+    if (!eventId) { document.getElementById('title').textContent = 'Hibás hivatkozás'; return; }
+    const res = await fetch(WORKER + '/events');
+    const events = await res.json();
+    const ev = events.find(e => e.id === eventId);
+    if (!ev) { document.getElementById('title').textContent = 'Esemény nem található'; return; }
+    document.getElementById('title').textContent = ev.title;
+    document.getElementById('desc').textContent = ev.description || '';
+    document.getElementById('time').textContent = new Date(ev.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
+    document.getElementById('info').style.display = 'block';
+    if (token) document.getElementById('bookBtn').style.display = 'block';
+    else document.getElementById('errBox').innerHTML = 'A jelentkezéshez <a href="index.html" style="color:#ef7a14">először lépj be</a>!';
+    document.getElementById('errBox').style.display = token ? 'none' : 'block';
+  }
+
+  async function book() {
+    const btn = document.getElementById('bookBtn');
+    btn.disabled = true; btn.textContent = 'Folyamatban...';
+    const res = await fetch(WORKER + '/event/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ event_id: eventId })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById('errBox').textContent = data.error || 'Hiba történt';
+      document.getElementById('errBox').style.display = 'block';
+      btn.disabled = false; btn.textContent = '✅ Jelentkezem';
+    } else {
+      document.getElementById('okBox').innerHTML = '✅ Sikeresen jelentkeztél! Email és Calendar meghívó elküldve.' + (data.calendar_event ? ` <a href="${data.calendar_event}" target="_blank" style="color:#22c55e">Megnyitás</a>` : '');
+      document.getElementById('okBox').style.display = 'block';
+      btn.style.display = 'none';
+    }
+  }
+  load();
+</script>
+</body>
+</html>
