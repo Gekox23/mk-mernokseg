@@ -57,9 +57,7 @@
     <a href="terms.html">ÁSZF</a>
     <a href="privacy.html">Adatvédelem</a>
   </nav>
-  <div class="user-bar" id="userBar">
-    <!-- filled by JS -->
-  </div>
+  <div class="user-bar" id="userBar"></div>
 </header>
 
 <section class="hero">
@@ -86,8 +84,6 @@
     <div class="notice-item"><div><strong>Telephelyi gépátvétel</strong><p>Kiemelt adminisztráció, lassabb ügyfélfogadás.</p></div><span class="time">16:30–18:00</span></div>
     <div class="notice-item"><div><strong>Toborzási nap</strong><p>Új jelentkezők fogadása Google Meet alapon.</p></div><span class="time">18:30–20:00</span></div>
   </div>
-
-  <!-- Admin panel - only visible for admins -->
   <div class="admin-panel" id="adminPanel">
     <h3>🔧 Admin: Új napi hír</h3>
     <input type="text" id="noticeTitle" placeholder="Cím (pl. 4443 lezárás)">
@@ -125,54 +121,34 @@
 </footer>
 
 <script>
-  // ---- CONFIG - UPDATE WORKER URL AFTER CLOUDFLARE DEPLOYMENT ----
-  const WORKER_URL = 'https://YOUR_WORKER.workers.dev';
+  const WORKER_URL = 'https://mk.gekox1111.workers.dev';
   const DISCORD_CLIENT_ID = '1506719802390085778';
   const REDIRECT_URI = encodeURIComponent('https://gekox23.github.io/mk-mernokseg/callback.html');
   const DISCORD_OAUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=email+identify`;
 
-  // ---- Auth ----
   let currentUser = null;
-
   function getToken() { return localStorage.getItem('mk_token'); }
   function setToken(t) { localStorage.setItem('mk_token', t); }
   function clearToken() { localStorage.removeItem('mk_token'); }
 
   async function checkLogin() {
-    // Check if redirected back with ?token=
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
-    if (token) {
-      setToken(token);
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-
+    if (token) { setToken(token); window.history.replaceState({}, '', window.location.pathname); }
     const stored = getToken();
     if (!stored) return;
-
     try {
-      const res = await fetch(WORKER_URL + '/me', {
-        headers: { 'Authorization': 'Bearer ' + stored }
-      });
-      if (res.ok) {
-        currentUser = await res.json();
-        renderUser();
-      } else {
-        clearToken();
-      }
-    } catch(e) {
-      console.warn('Worker not yet configured:', e.message);
-    }
+      const res = await fetch(WORKER_URL + '/me', { headers: { 'Authorization': 'Bearer ' + stored } });
+      if (res.ok) { currentUser = await res.json(); renderUser(); }
+      else clearToken();
+    } catch(e) { console.warn('Worker hiba:', e.message); }
   }
 
   function renderUser() {
     if (!currentUser) return;
     const bar = document.getElementById('userBar');
-    const avatar = currentUser.avatar
-      ? `<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="" />`
-      : '';
+    const avatar = currentUser.avatar ? `<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="">` : '';
     bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>`;
-
     document.getElementById('loginButtons').style.display = 'none';
     document.getElementById('welcomeBox').style.display = 'block';
     document.getElementById('welcomeName').textContent = currentUser.username;
@@ -180,20 +156,10 @@
       document.getElementById('adminTag').style.display = 'inline';
       document.getElementById('adminPanel').style.display = 'block';
     }
-
-    // Show booking form for logged in users
-    document.getElementById('jelentkezesContent').innerHTML = `
-      <div class="card" style="max-width:560px">
-        <h3>Időpontfoglalás</h3>
-        <p style="margin-top:8px;color:#7a94ad">Google Calendar alapú foglalási rendszer — hamarosan éles. Addig jelöld magad az IC csatornán.</p>
-      </div>`;
+    document.getElementById('jelentkezesContent').innerHTML = `<div class="card" style="max-width:560px"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Google Calendar alapú foglalási rendszer — hamarosan éles. Addig jelöld magad az IC csatornán.</p></div>`;
   }
 
-  function logout() {
-    clearToken();
-    currentUser = null;
-    location.reload();
-  }
+  function logout() { clearToken(); currentUser = null; location.reload(); }
 
   function addNotice() {
     if (!currentUser || !currentUser.isAdmin) return;
@@ -210,11 +176,8 @@
     document.getElementById('noticeDesc').value = '';
   }
 
-  // Set Discord login links
   document.getElementById('discordLoginBtn').href = DISCORD_OAUTH_URL;
   document.getElementById('discordLoginBtn2').href = DISCORD_OAUTH_URL;
-
-  // Init
   checkLogin();
 </script>
 </body>

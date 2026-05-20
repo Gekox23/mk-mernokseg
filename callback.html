@@ -16,12 +16,10 @@
   <div class="spinner"></div>
   <p>Discord bejelentkezés folyamatban...</p>
   <script>
-    // Get ?code= from URL, send to Cloudflare Worker
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     if (code) {
-      // REPLACE THIS URL with your Cloudflare Worker URL after deployment
-      window.location.href = 'https://YOUR_WORKER.workers.dev/callback?code=' + code;
+      window.location.href = 'https://mk.gekox1111.workers.dev/callback?code=' + code;
     } else {
       document.querySelector('p').textContent = 'Hiba: nincs bejelentkezési kód. Próbáld újra.';
     }
