@@ -200,7 +200,7 @@
       tbody.innerHTML = events.map(e => {
         const start = new Date(e.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
         const badgeCls = e.type === 'toborzas' ? 'badge-toborzas' : e.type === 'foglalas' ? 'badge-foglalas' : 'badge-lezaras';
-        const typeLabel = e.type === 'toborzas' ? '🎮 Tobورزás' : e.type === 'foglalas' ? '📅 Foglalás' : '🚧 Napi infó';
+        const typeLabel = e.type === 'toborzas' ? '🎮 Toborzás' : e.type === 'foglalas' ? '📅 Foglalás' : '🚧 Napi infó';
         const linkHref = e.type === 'lezaras'
           ? 'https://gekox23.github.io/mk-mernokseg/'
           : `foglalas.html?event=${e.id}`;
