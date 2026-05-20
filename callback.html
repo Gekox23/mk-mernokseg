@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Bejelentkezés...</title>
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;
+    display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px}
+    .spinner{width:40px;height:40px;border:4px solid #243347;border-top-color:#5865F2;
+    border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    p{color:#8fa4bc}
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <p>Discord bejelentkezés folyamatban...</p>
+  <script>
+    // Get ?code= from URL, send to Cloudflare Worker
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      // REPLACE THIS URL with your Cloudflare Worker URL after deployment
+      window.location.href = 'https://YOUR_WORKER.workers.dev/callback?code=' + code;
+    } else {
+      document.querySelector('p').textContent = 'Hiba: nincs bejelentkezési kód. Próbáld újra.';
+    }
+  </script>
+</body>
+</html>
