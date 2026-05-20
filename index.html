@@ -15,6 +15,7 @@
     .user-bar{display:flex;align-items:center;gap:10px;font-size:14px}
     .user-bar img{width:32px;height:32px;border-radius:50%;border:2px solid #5865F2}
     .admin-badge{background:#ef7a14;color:#fff;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+    .roblox-badge{background:#1a2c42;color:#ffb86c;padding:2px 8px;border-radius:999px;font-size:12px}
     .logout-btn{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
     .hero{max-width:1100px;margin:48px auto 0;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
     .hero h1{font-size:36px;line-height:1.1;margin-bottom:16px}
@@ -23,6 +24,7 @@
     .btn{display:inline-block;padding:12px 20px;border-radius:10px;font-weight:700;cursor:pointer;border:none;font-size:15px;margin-right:10px}
     .btn-discord{background:#5865F2;color:#fff}
     .btn-roblox{background:#e4000f;color:#fff}
+    .btn-chat{background:#162233;border:1px solid #243347;color:#dce8f5}
     .hero-img{background:#162233;border:1px solid #243347;border-radius:20px;height:320px;display:flex;align-items:center;justify-content:center;color:#3d566e}
     .section{max-width:1100px;margin:48px auto;padding:0 24px}
     .section h2{font-size:22px;margin-bottom:18px;color:#ef7a14}
@@ -41,6 +43,8 @@
     .admin-panel button{background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700}
     .login-box{background:#162233;border:1px solid #243347;border-radius:16px;padding:24px;text-align:center;max-width:400px}
     .login-box p{color:#7a94ad;margin-bottom:18px;font-size:14px}
+    .chat-float{position:fixed;bottom:24px;right:24px;z-index:100}
+    .chat-float a{display:flex;align-items:center;gap:8px;background:#5865F2;color:#fff;padding:12px 18px;border-radius:999px;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
     footer{background:#0c1422;border-top:1px solid #1a2c42;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:48px;font-size:13px;color:#4a6580}
     footer a{color:#4a6580;margin-left:16px}
     footer a:hover{color:#ef7a14}
@@ -54,6 +58,7 @@
     <a href="#napik">Napi infók</a>
     <a href="#rolunk">Rólunk</a>
     <a href="#jelentkezes">Jelentkezés</a>
+    <a href="chat.html">💬 Chat</a>
     <a href="terms.html">ÁSZF</a>
     <a href="privacy.html">Adatvédelem</a>
   </nav>
@@ -67,11 +72,11 @@
     <p>Napi útzárások, toborzás és foglalások egy helyen.</p>
     <div id="loginButtons">
       <a href="#" id="discordLoginBtn" class="btn btn-discord">👤 Belépés Discorddal</a>
-      <a href="#" class="btn btn-roblox">🎮 Belépés Robloxxal</a>
     </div>
     <div id="welcomeBox" style="display:none;margin-top:16px;background:#1a2c42;border:1px solid #2b4668;border-radius:12px;padding:14px 18px;font-size:14px;color:#8fa4bc">
       👋 Üdvözlünk, <strong id="welcomeName"></strong>!
       <span id="adminTag" style="display:none" class="admin-badge">&nbsp;ADMIN&nbsp;</span>
+      <span id="robloxTag" style="display:none" class="roblox-badge">🎮 <span id="robloxName"></span></span>
     </div>
   </div>
   <div class="hero-img">Kép hamarosan 🚧</div>
@@ -98,7 +103,7 @@
   <div class="cards">
     <div class="card"><h3>Közútkezelés</h3><p>Útfenntartás, burkolatjavítás és forgalomterelés a Mezőkovácsházi körzetben.</p></div>
     <div class="card"><h3>Toborzás</h3><p>Rendszeres toborzási napok és Google Meet alapú felvételi elbeszélgetések.</p></div>
-    <div class="card"><h3>Ügyfélfogadás</h3><p>Adminisztrált időpontok, online foglalási rendszer hamarosan.</p></div>
+    <div class="card" style="cursor:pointer" onclick="window.location.href='chat.html'"><h3>💬 Segítség / Chat</h3><p>Kérdésed van? Írj nekünk a chat felületen, hamarosan válaszolunk.</p></div>
   </div>
 </section>
 
@@ -111,6 +116,11 @@
     </div>
   </div>
 </section>
+
+<!-- Floating chat button -->
+<div class="chat-float">
+  <a href="chat.html">💬 Segítség</a>
+</div>
 
 <footer>
   <span>Mezőkovácsházi Mérnökség &copy; 2026</span>
@@ -148,15 +158,15 @@
     if (!currentUser) return;
     const bar = document.getElementById('userBar');
     const avatar = currentUser.avatar ? `<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="">` : '';
-    bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>`;
+    bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}${currentUser.roblox_username ? `<span class="roblox-badge">🎮 ${currentUser.roblox_username}</span>` : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>`;
     document.getElementById('loginButtons').style.display = 'none';
     document.getElementById('welcomeBox').style.display = 'block';
     document.getElementById('welcomeName').textContent = currentUser.username;
-    if (currentUser.isAdmin) {
-      document.getElementById('adminTag').style.display = 'inline';
-      document.getElementById('adminPanel').style.display = 'block';
-    }
+    if (currentUser.isAdmin) { document.getElementById('adminTag').style.display = 'inline'; document.getElementById('adminPanel').style.display = 'block'; }
+    if (currentUser.roblox_username) { document.getElementById('robloxTag').style.display = 'inline'; document.getElementById('robloxName').textContent = currentUser.roblox_username; }
     document.getElementById('jelentkezesContent').innerHTML = `<div class="card" style="max-width:560px"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Google Calendar alapú foglalási rendszer — hamarosan éles. Addig jelöld magad az IC csatornán.</p></div>`;
+    // Log page visit
+    fetch(WORKER_URL + '/log', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() }, body: JSON.stringify({ action: 'page_visit_index' }) }).catch(()=>{});
   }
 
   function logout() { clearToken(); currentUser = null; location.reload(); }
