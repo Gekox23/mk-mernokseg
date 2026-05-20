@@ -56,14 +56,14 @@
 
   <div class="panel">
     <h3>📅 Új esemény létrehozása</h3>
-    <label>Ésemény típusa</label>
+    <label>Esemény típusa</label>
     <select id="evType">
-      <option value="toborzas">🎮 Tobورزás – Discord értesítőt küld</option>
-      <option value="foglalas">📅 Időpontfoglalás – egyedi jelentkezés</option>
-      <option value="lezaras">🚧 Napi infó / útzarás</option>
+      <option value="toborzas">🎮 Tobőrzás</option>
+      <option value="foglalas">📚 Oktatás</option>
+      <option value="lezaras">🚧 Úti tájékoztatás</option>
     </select>
     <label>Cím *</label>
-    <input type="text" id="evTitle" placeholder="pl. Tobورزási nap – június 1.">
+    <input type="text" id="evTitle" placeholder="pl. Tobőrzési nap – június 1.">
     <label>Leírás</label>
     <textarea id="evDesc" placeholder="Részletek, tudnivalók..."></textarea>
     <div class="row">
@@ -178,7 +178,7 @@
   }
 
   async function deleteEvent(id, title) {
-    if (!confirm(`Biztosan törölöd ezt az eseményt?\n\"${title}\"`)) return;
+    if (!confirm(`Biztosan törölöd ezt az eseményt?\n"${title}"`)) return;
     try {
       const res = await fetch(WORKER + '/event/delete', {
         method: 'POST',
@@ -200,17 +200,15 @@
       tbody.innerHTML = events.map(e => {
         const start = new Date(e.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
         const badgeCls = e.type === 'toborzas' ? 'badge-toborzas' : e.type === 'foglalas' ? 'badge-foglalas' : 'badge-lezaras';
-        const typeLabel = e.type === 'toborzas' ? '🎮 Toborzás' : e.type === 'foglalas' ? '📅 Foglalás' : '🚧 Napi infó';
-        const linkHref = e.type === 'lezaras'
-          ? 'https://gekox23.github.io/mk-mernokseg/'
-          : `foglalas.html?event=${e.id}`;
+        const typeLabel = e.type === 'toborzas' ? '🎮 Tobőrzás' : e.type === 'foglalas' ? '📚 Oktatás' : '🚧 Úti tájékoztatás';
+        const linkHref = e.type === 'lezaras' ? 'https://gekox23.github.io/mk-mernokseg/' : `foglalas.html?event=${e.id}`;
         const linkLabel = e.type === 'lezaras' ? '🌐 Weboldal' : '🔗 Link';
         return `<tr>
           <td>${e.title}</td>
           <td><span class="badge ${badgeCls}">${typeLabel}</span></td>
           <td>${start}</td>
           <td><a href="${linkHref}" target="_blank" style="color:#ef7a14">${linkLabel}</a></td>
-          <td><button class="btn-danger" onclick="deleteEvent('${e.id}', '${e.title.replace(/'/g, "&apos;")}')">&#x1F5D1; Töröl</button></td>
+          <td><button class="btn-danger" onclick="deleteEvent('${e.id}','${e.title.replace(/'/g,"&apos;")}')">🗑️ Töröl</button></td>
         </tr>`;
       }).join('');
     } catch(e) {

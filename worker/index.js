@@ -6,9 +6,11 @@
 
 const ADMINS = ['daniell5818'];
 
-// Webhook 1: Események kihirdetése (létrehozás, törlés)
+// Webhook 1: Tobőrzás és Úti tájékoztató kihirdetése
 const WEBHOOK_EVENTS = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
-// Webhook 2: Log / aktivitás (belépés, jelentkezés, chat)
+// Webhook 2: Oktatás kihirdetése
+const WEBHOOK_OKTATAS = 'https://discord.com/api/webhooks/1506772218556711064/I7nV6_NFGWp0H5mEfq_UHx7ZSTzdopyN_e4re8e-7Ioi6UqXwT4DiwAEkIZCeEmLgcxj';
+// Webhook 3: Log / aktivitás
 const WEBHOOK_LOG = 'https://discord.com/api/webhooks/1506768409038426144/55NhExpjToN7nj5ScGAsRT6mp-2b41c2OMQYhpGmpM01QuXgU8789xtXQwHbHoIW8k9j';
 
 const CORS = {
@@ -80,18 +82,10 @@ async function handleDeleteEvent(request, env) {
   const body = await request.json();
   const { event_id } = body;
   if (!event_id) return jsonRes({ error: 'Hiányzó event_id' }, 400);
-  const ev = await env.DB.prepare('SELECT title FROM events WHERE id=?1').bind(event_id).first();
+  const ev = await env.DB.prepare('SELECT title, type FROM events WHERE id=?1').bind(event_id).first();
   await env.DB.prepare('DELETE FROM bookings WHERE event_id=?1').bind(event_id).run();
   await env.DB.prepare('DELETE FROM events WHERE id=?1').bind(event_id).run();
   if (ev) {
-    // Esemény törlése → WEBHOOK_EVENTS
-    await sendEmbed(WEBHOOK_EVENTS, {
-      title: '🗑️ Esemény törölve',
-      description: `**${ev.title}** eseményt törölte: **${user.username}**`,
-      color: 0xe74c3c,
-      timestamp: new Date().toISOString(),
-    });
-    // Log → WEBHOOK_LOG
     await sendEmbed(WEBHOOK_LOG, {
       title: '🗑️ Log: esemény törölve',
       description: `**${user.username}** törölte: **${ev.title}**`,
@@ -120,32 +114,65 @@ async function handleCreateEvent(request, env) {
 
   const startStr = new Date(start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
   const endStr   = new Date(end_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-  const typeLabel = type === 'toborzas' ? '🎮 Tobورzás' : type === 'foglalas' ? '📅 Időpontfoglalás' : '🚧 Napi infó';
-  const color = type === 'toborzas' ? 0xef7a14 : type === 'foglalas' ? 0x22c55e : 0x3b82f6;
-  const linkUrl = type === 'lezaras'
-    ? 'https://gekox23.github.io/mk-mernokseg/'
-    : `https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}`;
-  const linkLabel = type === 'lezaras' ? '🌐 Weboldal megnyitása' : '✅ Jelentkezem';
+  const bookUrl  = `https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}`;
+  const siteUrl  = 'https://gekox23.github.io/mk-mernokseg/';
 
-  // Esemény kihirdetése → WEBHOOK_EVENTS
-  await sendEmbed(WEBHOOK_EVENTS, {
-    title: `${typeLabel}: ${title}`,
-    description: description || '',
-    color,
-    fields: [
-      { name: '⏰ Kezdés', value: startStr, inline: true },
-      { name: '⏳ Vége', value: endStr, inline: true },
-      { name: '👥 Max. fő', value: max_slots > 0 ? String(max_slots) : 'Korlátlan', inline: true },
-      { name: '🔗 Link', value: `[${linkLabel}](${linkUrl})` },
-    ],
-    footer: { text: `Létrehozta: ${user.username}` },
-    timestamp: new Date().toISOString(),
-  });
+  if (type === 'toborzas') {
+    await sendEmbed(WEBHOOK_EVENTS, {
+      title: '🎮 Magyar Közút tobőrzést hirdetett!',
+      description: description
+        ? `${description}\n\u200b`
+        : '​',
+      color: 0xef7a14,
+      fields: [
+        { name: '📌 Esemény neve', value: title, inline: false },
+        { name: '⏰ Kezdés', value: startStr, inline: true },
+        { name: '⏳ Vége', value: endStr, inline: true },
+        { name: '👥 Férőhelyek', value: max_slots > 0 ? `${max_slots} fő` : 'Korlátlan', inline: true },
+        { name: '🔗 Jelentkezés', value: `[✅ Jelentkezem a tobőrzésre!](${bookUrl})`, inline: false },
+      ],
+      footer: { text: 'Mezőkovácsházi Mérnökség' },
+      timestamp: new Date().toISOString(),
+    });
+  } else if (type === 'foglalas') {
+    await sendEmbed(WEBHOOK_OKTATAS, {
+      title: '📚 Új oktatás került meghirdetésre!',
+      description: description
+        ? `${description}\n\u200b`
+        : '​',
+      color: 0x22c55e,
+      fields: [
+        { name: '📌 Oktatás neve', value: title, inline: false },
+        { name: '⏰ Kezdés', value: startStr, inline: true },
+        { name: '⏳ Vége', value: endStr, inline: true },
+        { name: '👥 Férőhelyek', value: max_slots > 0 ? `${max_slots} fő` : 'Korlátlan', inline: true },
+        { name: '🔗 Jelentkezés', value: `[✅ Jelentkezem az oktatásra!](${bookUrl})`, inline: false },
+      ],
+      footer: { text: 'Mezőkovácsházi Mérnökség' },
+      timestamp: new Date().toISOString(),
+    });
+  } else {
+    // lezaras / napi info
+    await sendEmbed(WEBHOOK_EVENTS, {
+      title: '🚧 Úti tájékoztatás',
+      description: description
+        ? `${description}\n\u200b`
+        : '​',
+      color: 0x3b82f6,
+      fields: [
+        { name: '📌 Megnevezés', value: title, inline: false },
+        { name: '⏰ Érvényes ettől', value: startStr, inline: true },
+        { name: '⏳ Érvényes eddig', value: endStr, inline: true },
+        { name: '🌐 További infó', value: `[Weboldal megnyitása](${siteUrl})`, inline: false },
+      ],
+      footer: { text: 'Mezőkovácsházi Mérnökség' },
+      timestamp: new Date().toISOString(),
+    });
+  }
 
-  // Log → WEBHOOK_LOG
   await sendEmbed(WEBHOOK_LOG, {
     title: '📝 Log: új esemény létrehozva',
-    description: `**${user.username}** létrehozta: **${title}** (${typeLabel})`,
+    description: `**${user.username}** létrehozta: **${title}** (${type})`,
     color: 0x8fa4bc,
     timestamp: new Date().toISOString(),
   });
@@ -172,7 +199,6 @@ async function handleBookSlot(request, env) {
     .bind(event_id, user.id, user.email || '', user.username, Date.now()).run();
 
   const startStr = new Date(event.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-  // Jelentkezés log → WEBHOOK_LOG
   await sendEmbed(WEBHOOK_LOG, {
     title: '✅ Log: új jelentkezés',
     description: `**${user.username}** jelentkezett: **${event.title}**`,
@@ -215,7 +241,6 @@ async function handleDiscordCallback(url, request, env) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1,?2,?3,?4,?5)')
     .bind(dUser.id, 'discord_login', ip, request.headers.get('User-Agent') || '', now).run();
-  // Belépés log → WEBHOOK_LOG
   await sendEmbed(WEBHOOK_LOG, {
     title: '🔑 Log: belépés',
     description: `**${dUser.username}** bejelentkezett Discord-dal`,
@@ -240,7 +265,6 @@ async function handleLog(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1,?2,?3,?4,?5)')
     .bind(user?.id || 'anonymous', body.action || 'unknown', ip, request.headers.get('User-Agent') || '', Date.now()).run();
-  // Általános log → WEBHOOK_LOG
   await sendEmbed(WEBHOOK_LOG, {
     title: '📝 Log: aktivitás',
     description: `**${user?.username || 'ismeretlen'}** → ${body.action || 'unknown'}`,
@@ -261,7 +285,6 @@ async function handleChatSend(request, env) {
     .bind(user.id, user.username, user.avatar || null, msg, Date.now()).run();
   await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1,?2,?3,?4,?5)')
     .bind(user.id, 'chat_send', request.headers.get('CF-Connecting-IP') || 'unknown', request.headers.get('User-Agent') || '', Date.now()).run();
-  // Chat log → WEBHOOK_LOG
   await sendEmbed(WEBHOOK_LOG, {
     title: '💬 Log: chat üzenet',
     description: `**${user.username}**: ${msg.slice(0, 200)}`,
