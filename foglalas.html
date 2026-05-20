@@ -13,8 +13,10 @@
     .info{background:#0f1826;border-radius:10px;padding:14px;margin-bottom:20px;text-align:left}
     .btn{width:100%;padding:13px;border-radius:10px;border:none;font-size:15px;font-weight:700;cursor:pointer;background:#22c55e;color:#fff;margin-top:8px}
     .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn-login{background:#5865f2;color:#fff;text-decoration:none;display:block;padding:12px;border-radius:10px;font-size:15px;font-weight:700;margin-top:8px}
     .error{background:#2c1215;border:1px solid #5c1a1a;border-radius:8px;padding:10px;color:#f87171;font-size:13px;margin-bottom:12px;display:none}
     .success{background:#0d2b1e;border:1px solid #166534;border-radius:8px;padding:12px;color:#86efac;font-size:14px;margin-bottom:12px;display:none}
+    .slots{font-size:13px;color:#8fa4bc;margin-bottom:8px}
   </style>
 </head>
 <body>
@@ -23,49 +25,75 @@
   <div class="info" id="info" style="display:none">
     <p id="desc"></p>
     <p><b>⏰ Időpont:</b> <span id="time"></span></p>
+    <p class="slots" id="slotsInfo"></p>
   </div>
   <div class="error" id="errBox"></div>
   <div class="success" id="okBox"></div>
-  <button class="btn" id="bookBtn" onclick="book()" style="display:none">✅ Jelentkezem</button>
+  <div id="actionArea"></div>
 </div>
 <script>
   const WORKER = 'https://mk.gekox1111.workers.dev';
+  const DISCORD_AUTH = 'https://discord.com/api/oauth2/authorize?client_id=1372626480042258542&redirect_uri=https%3A%2F%2Fmk.gekox1111.workers.dev%2Fcallback&response_type=code&scope=identify%20email';
   const params = new URLSearchParams(window.location.search);
   const eventId = params.get('event');
   const token = localStorage.getItem('mk_token');
+  let loggedUser = null;
 
   async function load() {
     if (!eventId) { document.getElementById('title').textContent = 'Hibás hivatkozás'; return; }
-    const res = await fetch(WORKER + '/events');
+
+    // check login
+    if (token) {
+      try {
+        const r = await fetch(WORKER+'/me', {headers:{Authorization:'Bearer '+token}});
+        if (r.ok) loggedUser = await r.json();
+      } catch(_) {}
+    }
+
+    const res = await fetch(WORKER+'/events');
     const events = await res.json();
     const ev = events.find(e => e.id === eventId);
     if (!ev) { document.getElementById('title').textContent = 'Esemény nem található'; return; }
+
     document.getElementById('title').textContent = ev.title;
     document.getElementById('desc').textContent = ev.description || '';
-    document.getElementById('time').textContent = new Date(ev.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-    document.getElementById('info').style.display = 'block';
-    if (token) document.getElementById('bookBtn').style.display = 'block';
-    else document.getElementById('errBox').innerHTML = 'A jelentkezéshez <a href="index.html" style="color:#ef7a14">először lépj be</a>!';
-    document.getElementById('errBox').style.display = token ? 'none' : 'block';
+    document.getElementById('time').textContent = new Date(ev.start_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest'});
+    if (ev.max_slots > 0) {
+      document.getElementById('slotsInfo').textContent = `Férőhelyek: ${ev.booked_count ?? '?'}/${ev.max_slots} fő`;
+    }
+    document.getElementById('info').style.display='block';
+
+    const area = document.getElementById('actionArea');
+
+    if (!loggedUser) {
+      // nem bejelentkezve
+      document.getElementById('errBox').innerHTML = '⚠️ A jelentkezéshez először be kell regisztrálnod / bejelentkezned!';
+      document.getElementById('errBox').style.display='block';
+      area.innerHTML = `<a class="btn-login" href="${DISCORD_AUTH}">&#x1F4AC; Belépés Discorddal</a>`;
+      return;
+    }
+
+    // check if already booked — we try to book and handle 409
+    area.innerHTML = '<button class="btn" id="bookBtn" onclick="book()">&#x2705; Jelentkezem</button>';
   }
 
   async function book() {
     const btn = document.getElementById('bookBtn');
-    btn.disabled = true; btn.textContent = 'Folyamatban...';
-    const res = await fetch(WORKER + '/event/book', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ event_id: eventId })
+    btn.disabled=true; btn.textContent='Folyamatban...';
+    const res = await fetch(WORKER+'/event/book',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({event_id:eventId})
     });
     const data = await res.json();
     if (!res.ok) {
-      document.getElementById('errBox').textContent = data.error || 'Hiba történt';
-      document.getElementById('errBox').style.display = 'block';
-      btn.disabled = false; btn.textContent = '✅ Jelentkezem';
+      document.getElementById('errBox').textContent = data.error||'Hiba történt';
+      document.getElementById('errBox').style.display='block';
+      btn.disabled=false; btn.textContent='✅ Jelentkezem';
     } else {
-      document.getElementById('okBox').textContent = '✅ Sikeresen jelentkeztél!';
-      document.getElementById('okBox').style.display = 'block';
-      btn.style.display = 'none';
+      document.getElementById('okBox').textContent='✅ Sikeresen jelentkeztél!';
+      document.getElementById('okBox').style.display='block';
+      document.getElementById('actionArea').innerHTML='';
     }
   }
   load();
