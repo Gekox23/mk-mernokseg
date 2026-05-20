@@ -49,7 +49,8 @@
   </div>
 </header>
 
-<div class="container" id="mainContent" style="display:none">
+<!-- Fontos: alapértelmezetten látszódjon a tartalom, csak JS-ben rejtsük el ha nem admin -->
+<div class="container" id="mainContent">
   <h2>🔧 Admin Panel</h2>
 
   <div class="panel">
@@ -107,23 +108,38 @@
     el.className = 'msg ' + (type === 'ok' ? 'msg-ok' : type === 'loading' ? 'msg-loading' : 'msg-err');
     el.innerHTML = html;
     el.style.display = 'block';
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   function hideMsg() { document.getElementById('createMsg').style.display = 'none'; }
 
   async function init() {
-    if (!token) { window.location.href = 'index.html'; return; }
-    showMsg('loading', '<span class="spinner"></span> Ellenőrzés...');
+    // Ha nincs token: marad az oldal, de piros üzenet, gomb letiltva
+    if (!token) {
+      document.getElementById('createBtn').disabled = true;
+      showMsg('err', '❌ Nem vagy bejelentkezve. Lépj be a főoldalon Discorddal, majd gyere vissza az admin panelre.');
+      return;
+    }
+    showMsg('loading', '<span class="spinner"></span> Jogosultság ellenőrzése...');
     try {
       const res = await fetch(WORKER + '/me', { headers: { Authorization: 'Bearer ' + token } });
-      if (!res.ok) { window.location.href = 'index.html'; return; }
+      if (!res.ok) {
+        document.getElementById('createBtn').disabled = true;
+        showMsg('err', '❌ A bejelentkezés lejárt vagy érvénytelen. Lépj ki a főoldalon és jelentkezz be újra.');
+        return;
+      }
       user = await res.json();
     } catch(e) {
       showMsg('err', '⚠️ Nem sikerült csatlakozni a szerverhez. Ellenőrizd az internetkapcsolatot!');
       return;
     }
     hideMsg();
-    if (!user.isAdmin) { document.getElementById('noAccess').style.display = 'flex'; return; }
+
+    // Ha nem admin: elrejtjük a panelt, megjelenik a no-access blokk
+    if (!user.isAdmin) {
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('noAccess').style.display = 'flex';
+      return;
+    }
+
     document.getElementById('adminName').textContent = '👤 ' + user.username;
     document.getElementById('mainContent').style.display = 'block';
     loadEvents();
@@ -133,6 +149,7 @@
   async function createEvent() {
     const btn = document.getElementById('createBtn');
     hideMsg();
+
     const title = document.getElementById('evTitle').value.trim();
     const desc = document.getElementById('evDesc').value.trim();
     const type = document.getElementById('evType').value;
@@ -140,11 +157,12 @@
     const end = document.getElementById('evEnd').value;
     const slots = parseInt(document.getElementById('evSlots').value) || 0;
 
-    // Validation
     if (!title) { showMsg('err', '❌ Hiányzó mező: <b>Cím</b> kötelező!'); return; }
     if (!start) { showMsg('err', '❌ Hiányzó mező: <b>Kezdés időpontja</b> kötelező!'); return; }
     if (!end) { showMsg('err', '❌ Hiányzó mező: <b>Vége időpontja</b> kötelező!'); return; }
     if (new Date(end) <= new Date(start)) { showMsg('err', '❌ A <b>vége időpont</b> nem lehet korábbi mint a kezdés!'); return; }
+
+    if (!token) { showMsg('err', '❌ Nincs érvényes bejelentkezés.'); return; }
 
     btn.disabled = true;
     const isToborzas = type === 'toborzas';
@@ -210,6 +228,7 @@
   }
 
   function logout() { localStorage.removeItem('mk_token'); window.location.href = 'index.html'; }
+
   init();
 </script>
 </body>
