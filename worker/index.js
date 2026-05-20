@@ -25,11 +25,11 @@ export default {
   }
 };
 
-// ---- DB init — one exec() per statement ----
+// ---- DB init ----
 async function initDB(env) {
-  await env.DB.exec(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, discord_id TEXT UNIQUE, discord_username TEXT, roblox_username TEXT, email TEXT, is_admin INTEGER DEFAULT 0, created_at INTEGER)`);
-  await env.DB.exec(`CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, action TEXT, ip TEXT, user_agent TEXT, created_at INTEGER)`);
-  await env.DB.exec(`CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, username TEXT, avatar TEXT, message TEXT, created_at INTEGER)`);
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, discord_id TEXT UNIQUE, discord_username TEXT, roblox_username TEXT, email TEXT, is_admin INTEGER DEFAULT 0, created_at INTEGER)').run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, action TEXT, ip TEXT, user_agent TEXT, created_at INTEGER)').run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, username TEXT, avatar TEXT, message TEXT, created_at INTEGER)').run();
 }
 
 // ---- Discord OAuth callback ----
@@ -60,15 +60,15 @@ async function handleDiscordCallback(url, request, env) {
   const isAdmin = ADMINS.includes(dUser.username.toLowerCase());
   const now = Date.now();
 
-  await env.DB.prepare(`INSERT INTO users (id, discord_id, discord_username, email, is_admin, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(discord_id) DO UPDATE SET discord_username=excluded.discord_username, email=excluded.email, is_admin=excluded.is_admin`)
+  await env.DB.prepare('INSERT INTO users (id, discord_id, discord_username, email, is_admin, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(discord_id) DO UPDATE SET discord_username=excluded.discord_username, email=excluded.email, is_admin=excluded.is_admin')
     .bind(dUser.id, dUser.id, dUser.username, dUser.email || null, isAdmin ? 1 : 0, now).run();
 
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const ua = request.headers.get('User-Agent') || '';
-  await env.DB.prepare(`INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?, 'discord_login', ?, ?, ?)`)
-    .bind(dUser.id, ip, ua, now).run();
+  await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1, ?2, ?3, ?4, ?5)')
+    .bind(dUser.id, 'discord_login', ip, ua, now).run();
 
-  const dbUser = await env.DB.prepare('SELECT * FROM users WHERE discord_id = ?').bind(dUser.id).first();
+  const dbUser = await env.DB.prepare('SELECT * FROM users WHERE discord_id = ?1').bind(dUser.id).first();
 
   const payload = {
     id: dUser.id, discord_id: dUser.id, username: dUser.username,
@@ -93,13 +93,13 @@ async function handleRobloxLink(request, env) {
   const body = await request.json();
   const roblox = (body.roblox_username || '').trim();
   if (!roblox) return jsonRes({ error: 'Missing roblox_username' }, 400);
-  const existing = await env.DB.prepare('SELECT discord_id FROM users WHERE roblox_username = ?').bind(roblox).first();
+  const existing = await env.DB.prepare('SELECT discord_id FROM users WHERE roblox_username = ?1').bind(roblox).first();
   if (existing && existing.discord_id !== user.discord_id)
     return jsonRes({ error: 'Ez a Roblox felhasználónév már más fiókhoz van kötve!' }, 409);
-  await env.DB.prepare('UPDATE users SET roblox_username = ? WHERE discord_id = ?').bind(roblox, user.discord_id).run();
+  await env.DB.prepare('UPDATE users SET roblox_username = ?1 WHERE discord_id = ?2').bind(roblox, user.discord_id).run();
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  await env.DB.prepare(`INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?, 'roblox_link', ?, ?, ?)`)
-    .bind(user.id, ip, request.headers.get('User-Agent') || '', Date.now()).run();
+  await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1, ?2, ?3, ?4, ?5)')
+    .bind(user.id, 'roblox_link', ip, request.headers.get('User-Agent') || '', Date.now()).run();
   const newPayload = { ...user, roblox_username: roblox, exp: Date.now() + 86400000 };
   const token = await signToken(newPayload, env.JWT_SECRET);
   return jsonRes({ success: true, token });
@@ -118,7 +118,7 @@ async function handleLog(request, env) {
   const user = await authUser(request, env);
   const body = await request.json().catch(() => ({}));
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  await env.DB.prepare(`INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?, ?, ?, ?, ?)`)
+  await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1, ?2, ?3, ?4, ?5)')
     .bind(user?.id || 'anonymous', body.action || 'unknown', ip, request.headers.get('User-Agent') || '', Date.now()).run();
   return jsonRes({ ok: true });
 }
@@ -131,16 +131,16 @@ async function handleChatSend(request, env) {
   const body = await request.json();
   const msg = (body.message || '').trim().slice(0, 500);
   if (!msg) return jsonRes({ error: 'Üres üzenet' }, 400);
-  await env.DB.prepare(`INSERT INTO chat (user_id, username, avatar, message, created_at) VALUES (?, ?, ?, ?, ?)`)
+  await env.DB.prepare('INSERT INTO chat (user_id, username, avatar, message, created_at) VALUES (?1, ?2, ?3, ?4, ?5)')
     .bind(user.id, user.username, user.avatar || null, msg, Date.now()).run();
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  await env.DB.prepare(`INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?, 'chat_send', ?, ?, ?)`)
-    .bind(user.id, ip, request.headers.get('User-Agent') || '', Date.now()).run();
+  await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1, ?2, ?3, ?4, ?5)')
+    .bind(user.id, 'chat_send', ip, request.headers.get('User-Agent') || '', Date.now()).run();
   return jsonRes({ ok: true });
 }
 
 async function handleChatMessages(request, env) {
-  const rows = await env.DB.prepare(`SELECT * FROM chat ORDER BY created_at DESC LIMIT 50`).all();
+  const rows = await env.DB.prepare('SELECT * FROM chat ORDER BY created_at DESC LIMIT 50').all();
   return jsonRes(rows.results.reverse());
 }
 
