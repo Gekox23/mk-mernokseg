@@ -1,6 +1,6 @@
 // =============================================
 // Mezőkovácsházi Mérnökség - Full Worker Backend
-// Bindings needed: DB (D1), env vars: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, REDIRECT_URI, JWT_SECRET
+// Bindings: DB (D1) | Vars: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, REDIRECT_URI, JWT_SECRET
 // =============================================
 
 const ADMINS = ['daniell5818'];
@@ -13,52 +13,23 @@ const CORS = {
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
-
-    // Init DB tables on first run
     await initDB(env);
-
     const url = new URL(request.url);
-
-    if (url.pathname === '/callback')        return handleDiscordCallback(url, request, env);
-    if (url.pathname === '/roblox-link')     return handleRobloxLink(request, env);
-    if (url.pathname === '/me')              return handleMe(request, env);
-    if (url.pathname === '/log')             return handleLog(request, env);
-    if (url.pathname === '/chat/send')       return handleChatSend(request, env);
-    if (url.pathname === '/chat/messages')   return handleChatMessages(request, env);
-
+    if (url.pathname === '/callback')      return handleDiscordCallback(url, request, env);
+    if (url.pathname === '/roblox-link')   return handleRobloxLink(request, env);
+    if (url.pathname === '/me')            return handleMe(request, env);
+    if (url.pathname === '/log')           return handleLog(request, env);
+    if (url.pathname === '/chat/send')     return handleChatSend(request, env);
+    if (url.pathname === '/chat/messages') return handleChatMessages(request, env);
     return new Response('MK API OK', { status: 200 });
   }
 };
 
-// ---- DB init ----
+// ---- DB init — one exec() per statement ----
 async function initDB(env) {
-  await env.DB.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      discord_id TEXT UNIQUE,
-      discord_username TEXT,
-      roblox_username TEXT,
-      email TEXT,
-      is_admin INTEGER DEFAULT 0,
-      created_at INTEGER
-    );
-    CREATE TABLE IF NOT EXISTS logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT,
-      action TEXT,
-      ip TEXT,
-      user_agent TEXT,
-      created_at INTEGER
-    );
-    CREATE TABLE IF NOT EXISTS chat (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT,
-      username TEXT,
-      avatar TEXT,
-      message TEXT,
-      created_at INTEGER
-    );
-  `);
+  await env.DB.exec(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, discord_id TEXT UNIQUE, discord_username TEXT, roblox_username TEXT, email TEXT, is_admin INTEGER DEFAULT 0, created_at INTEGER)`);
+  await env.DB.exec(`CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, action TEXT, ip TEXT, user_agent TEXT, created_at INTEGER)`);
+  await env.DB.exec(`CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, username TEXT, avatar TEXT, message TEXT, created_at INTEGER)`);
 }
 
 // ---- Discord OAuth callback ----
@@ -89,35 +60,24 @@ async function handleDiscordCallback(url, request, env) {
   const isAdmin = ADMINS.includes(dUser.username.toLowerCase());
   const now = Date.now();
 
-  // Upsert user
-  await env.DB.prepare(`
-    INSERT INTO users (id, discord_id, discord_username, email, is_admin, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(discord_id) DO UPDATE SET discord_username=excluded.discord_username, email=excluded.email, is_admin=excluded.is_admin
-  `).bind(dUser.id, dUser.id, dUser.username, dUser.email || null, isAdmin ? 1 : 0, now).run();
+  await env.DB.prepare(`INSERT INTO users (id, discord_id, discord_username, email, is_admin, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(discord_id) DO UPDATE SET discord_username=excluded.discord_username, email=excluded.email, is_admin=excluded.is_admin`)
+    .bind(dUser.id, dUser.id, dUser.username, dUser.email || null, isAdmin ? 1 : 0, now).run();
 
-  // Log login
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const ua = request.headers.get('User-Agent') || '';
   await env.DB.prepare(`INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?, 'discord_login', ?, ?, ?)`)
     .bind(dUser.id, ip, ua, now).run();
 
-  // Fetch full user (with roblox)
   const dbUser = await env.DB.prepare('SELECT * FROM users WHERE discord_id = ?').bind(dUser.id).first();
 
   const payload = {
-    id: dUser.id,
-    discord_id: dUser.id,
-    username: dUser.username,
-    avatar: dUser.avatar,
-    email: dUser.email || null,
+    id: dUser.id, discord_id: dUser.id, username: dUser.username,
+    avatar: dUser.avatar, email: dUser.email || null,
     roblox_username: dbUser?.roblox_username || null,
-    isAdmin,
-    exp: now + 86400000,
+    isAdmin, exp: now + 86400000,
   };
 
   const token = await signToken(payload, env.JWT_SECRET);
-  // If no roblox linked yet, redirect to roblox linking page
   const needsRoblox = !dbUser?.roblox_username;
   const redirectUrl = needsRoblox
     ? `https://gekox23.github.io/mk-mernokseg/link-roblox.html?token=${token}`
@@ -130,26 +90,16 @@ async function handleRobloxLink(request, env) {
   if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
   const user = await authUser(request, env);
   if (!user) return jsonRes({ error: 'Unauthorized' }, 401);
-
   const body = await request.json();
   const roblox = (body.roblox_username || '').trim();
   if (!roblox) return jsonRes({ error: 'Missing roblox_username' }, 400);
-
-  // Check if roblox username already linked to another account
   const existing = await env.DB.prepare('SELECT discord_id FROM users WHERE roblox_username = ?').bind(roblox).first();
-  if (existing && existing.discord_id !== user.discord_id) {
+  if (existing && existing.discord_id !== user.discord_id)
     return jsonRes({ error: 'Ez a Roblox felhasználónév már más fiókhoz van kötve!' }, 409);
-  }
-
-  await env.DB.prepare('UPDATE users SET roblox_username = ? WHERE discord_id = ?')
-    .bind(roblox, user.discord_id).run();
-
-  // Log
+  await env.DB.prepare('UPDATE users SET roblox_username = ? WHERE discord_id = ?').bind(roblox, user.discord_id).run();
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   await env.DB.prepare(`INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?, 'roblox_link', ?, ?, ?)`)
     .bind(user.id, ip, request.headers.get('User-Agent') || '', Date.now()).run();
-
-  // Return updated token
   const newPayload = { ...user, roblox_username: roblox, exp: Date.now() + 86400000 };
   const token = await signToken(newPayload, env.JWT_SECRET);
   return jsonRes({ success: true, token });
@@ -162,15 +112,14 @@ async function handleMe(request, env) {
   return jsonRes(user);
 }
 
-// ---- Log action ----
+// ---- Log ----
 async function handleLog(request, env) {
   if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
   const user = await authUser(request, env);
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const ua = request.headers.get('User-Agent') || '';
   await env.DB.prepare(`INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?, ?, ?, ?, ?)`)
-    .bind(user?.id || 'anonymous', body.action || 'unknown', ip, ua, Date.now()).run();
+    .bind(user?.id || 'anonymous', body.action || 'unknown', ip, request.headers.get('User-Agent') || '', Date.now()).run();
   return jsonRes({ ok: true });
 }
 
@@ -184,7 +133,6 @@ async function handleChatSend(request, env) {
   if (!msg) return jsonRes({ error: 'Üres üzenet' }, 400);
   await env.DB.prepare(`INSERT INTO chat (user_id, username, avatar, message, created_at) VALUES (?, ?, ?, ?, ?)`)
     .bind(user.id, user.username, user.avatar || null, msg, Date.now()).run();
-  // Log
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   await env.DB.prepare(`INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?, 'chat_send', ?, ?, ?)`)
     .bind(user.id, ip, request.headers.get('User-Agent') || '', Date.now()).run();
@@ -198,8 +146,7 @@ async function handleChatMessages(request, env) {
 
 // ---- Helpers ----
 async function authUser(request, env) {
-  const auth = request.headers.get('Authorization') || '';
-  const token = auth.replace('Bearer ', '').trim();
+  const token = (request.headers.get('Authorization') || '').replace('Bearer ', '').trim();
   if (!token) return null;
   const payload = await verifyToken(token, env.JWT_SECRET);
   if (!payload || Date.now() > payload.exp) return null;
