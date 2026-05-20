@@ -15,7 +15,6 @@
     .user-bar{display:flex;align-items:center;gap:10px;font-size:14px}
     .user-bar img{width:32px;height:32px;border-radius:50%;border:2px solid #5865F2}
     .admin-badge{background:#ef7a14;color:#fff;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
-    .roblox-badge{background:#1a2c42;color:#ffb86c;padding:2px 8px;border-radius:999px;font-size:12px}
     .logout-btn{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
     .hero{max-width:1100px;margin:48px auto 0;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
     .hero h1{font-size:36px;line-height:1.1;margin-bottom:16px}
@@ -23,8 +22,6 @@
     .hero p{color:#8fa4bc;margin-bottom:24px}
     .btn{display:inline-block;padding:12px 20px;border-radius:10px;font-weight:700;cursor:pointer;border:none;font-size:15px;margin-right:10px}
     .btn-discord{background:#5865F2;color:#fff}
-    .btn-roblox{background:#e4000f;color:#fff}
-    .btn-chat{background:#162233;border:1px solid #243347;color:#dce8f5}
     .hero-img{background:#162233;border:1px solid #243347;border-radius:20px;height:320px;display:flex;align-items:center;justify-content:center;color:#3d566e}
     .section{max-width:1100px;margin:48px auto;padding:0 24px}
     .section h2{font-size:22px;margin-bottom:18px;color:#ef7a14}
@@ -32,15 +29,18 @@
     .card{background:#162233;border:1px solid #243347;border-radius:16px;padding:22px}
     .card h3{margin-bottom:8px;font-size:16px}
     .card p{color:#7a94ad;font-size:14px}
-    .notice-list{background:#162233;border:1px solid #243347;border-radius:16px;overflow:hidden}
-    .notice-item{padding:14px 18px;border-bottom:1px solid #1f3047;display:flex;justify-content:space-between;align-items:center;gap:12px}
-    .notice-item:last-child{border-bottom:none}
-    .notice-item p{font-size:13px;color:#7a94ad;margin-top:2px}
-    .time{background:#2c1e0e;color:#ffb86c;padding:4px 10px;border-radius:999px;font-size:12px;white-space:nowrap}
-    .admin-panel{background:#1a2c42;border:2px solid #ef7a14;border-radius:16px;padding:22px;margin-top:24px;display:none}
-    .admin-panel h3{color:#ef7a14;margin-bottom:12px}
-    .admin-panel input,.admin-panel textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2b4668;background:#0f1826;color:#dce8f5;margin-bottom:10px;font-size:14px}
-    .admin-panel button{background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700}
+    /* Events list */
+    .event-list{display:grid;gap:14px}
+    .event-card{background:#162233;border:1px solid #243347;border-radius:14px;padding:18px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+    .event-card h3{font-size:15px;margin-bottom:4px}
+    .event-card p{font-size:13px;color:#7a94ad}
+    .event-meta{text-align:right;white-space:nowrap}
+    .event-time{background:#2c1e0e;color:#ffb86c;padding:4px 10px;border-radius:999px;font-size:12px;display:inline-block;margin-bottom:6px}
+    .event-type-toborzas{border-left:3px solid #ef7a14}
+    .event-type-foglalas{border-left:3px solid #22c55e}
+    .event-type-lezaras{border-left:3px solid #60a5fa}
+    .book-btn{background:#22c55e;color:#fff;border:none;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700}
+    .empty-events{color:#4a6580;font-size:14px;padding:16px}
     .login-box{background:#162233;border:1px solid #243347;border-radius:16px;padding:24px;text-align:center;max-width:400px}
     .login-box p{color:#7a94ad;margin-bottom:18px;font-size:14px}
     .chat-float{position:fixed;bottom:24px;right:24px;z-index:100}
@@ -55,7 +55,7 @@
 <header>
   <div class="brand">Mezőkovácsházi <span>&nbsp;Mérnökség</span></div>
   <nav>
-    <a href="#napik">Napi infók</a>
+    <a href="#napik">Események</a>
     <a href="#rolunk">Rólunk</a>
     <a href="#jelentkezes">Jelentkezés</a>
     <a href="chat.html">💬 Chat</a>
@@ -69,40 +69,29 @@
   <div>
     <div style="display:inline-block;background:#2c1e0e;color:#ffb86c;padding:5px 12px;border-radius:999px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px">RP szerverhez</div>
     <h1>Mezőkovácsházi<br><span>Mérnökség</span></h1>
-    <p>Napi útzárások, toborzás és foglalások egy helyen.</p>
+    <p>Napi útzarások, tobörzés és foglalások egy helyen.</p>
     <div id="loginButtons">
       <a href="#" id="discordLoginBtn" class="btn btn-discord">👤 Belépés Discorddal</a>
     </div>
     <div id="welcomeBox" style="display:none;margin-top:16px;background:#1a2c42;border:1px solid #2b4668;border-radius:12px;padding:14px 18px;font-size:14px;color:#8fa4bc">
       👋 Üdvözlünk, <strong id="welcomeName"></strong>!
       <span id="adminTag" style="display:none" class="admin-badge">&nbsp;ADMIN&nbsp;</span>
-      <span id="robloxTag" style="display:none" class="roblox-badge">🎮 <span id="robloxName"></span></span>
     </div>
   </div>
   <div class="hero-img">Kép hamarosan 🚧</div>
 </section>
 
+<!-- Nyilvános: mai események -->
 <section class="section" id="napik">
-  <h2>Napi információk</h2>
-  <div class="notice-list" id="noticeList">
-    <div class="notice-item"><div><strong>4443 autóút lezárás</strong><p>Burkolatjavítás, félpályás forgalomterelés.</p></div><span class="time">Egész napi</span></div>
-    <div class="notice-item"><div><strong>Telephelyi gépátvétel</strong><p>Kiemelt adminisztráció, lassabb ügyfélfogadás.</p></div><span class="time">16:30–18:00</span></div>
-    <div class="notice-item"><div><strong>Toborzási nap</strong><p>Új jelentkezők fogadása Google Meet alapon.</p></div><span class="time">18:30–20:00</span></div>
-  </div>
-  <div class="admin-panel" id="adminPanel">
-    <h3>🔧 Admin: Új napi hír</h3>
-    <input type="text" id="noticeTitle" placeholder="Cím (pl. 4443 lezárás)">
-    <input type="text" id="noticeTime" placeholder="Idő (pl. Egész napi)">
-    <textarea id="noticeDesc" rows="2" placeholder="Leírás"></textarea>
-    <button onclick="addNotice()">Hír hozzáadása</button>
-  </div>
+  <h2>📅 Mai események</h2>
+  <div class="event-list" id="eventList"><p class="empty-events">Betöltés...</p></div>
 </section>
 
 <section class="section" id="rolunk">
   <h2>Rólunk</h2>
   <div class="cards">
     <div class="card"><h3>Közútkezelés</h3><p>Útfenntartás, burkolatjavítás és forgalomterelés a Mezőkovácsházi körzetben.</p></div>
-    <div class="card"><h3>Toborzás</h3><p>Rendszeres toborzási napok és Google Meet alapú felvételi elbeszélgetések.</p></div>
+    <div class="card"><h3>Tobörzés</h3><p>Rendszeres tobörzési napok és Google Meet alapú felvételi elbeszélgetések.</p></div>
     <div class="card" style="cursor:pointer" onclick="window.location.href='chat.html'"><h3>💬 Segítség / Chat</h3><p>Kérdésed van? Írj nekünk a chat felületen, hamarosan válaszolunk.</p></div>
   </div>
 </section>
@@ -117,10 +106,7 @@
   </div>
 </section>
 
-<!-- Floating chat button -->
-<div class="chat-float">
-  <a href="chat.html">💬 Segítség</a>
-</div>
+<div class="chat-float"><a href="chat.html">💬 Segítség</a></div>
 
 <footer>
   <span>Mezőkovácsházi Mérnökség &copy; 2026</span>
@@ -146,46 +132,58 @@
     const token = params.get('token');
     if (token) { setToken(token); window.history.replaceState({}, '', window.location.pathname); }
     const stored = getToken();
-    if (!stored) return;
-    try {
-      const res = await fetch(WORKER_URL + '/me', { headers: { 'Authorization': 'Bearer ' + stored } });
-      if (res.ok) { currentUser = await res.json(); renderUser(); }
-      else clearToken();
-    } catch(e) { console.warn('Worker hiba:', e.message); }
+    if (stored) {
+      try {
+        const res = await fetch(WORKER_URL + '/me', { headers: { Authorization: 'Bearer ' + stored } });
+        if (res.ok) { currentUser = await res.json(); renderUser(); }
+        else clearToken();
+      } catch(e) {}
+    }
+    loadTodayEvents();
   }
 
   function renderUser() {
     if (!currentUser) return;
     const bar = document.getElementById('userBar');
     const avatar = currentUser.avatar ? `<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="">` : '';
-    bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}${currentUser.roblox_username ? `<span class="roblox-badge">🎮 ${currentUser.roblox_username}</span>` : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>`;
+    bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>`;
+    if (currentUser.isAdmin) {
+      bar.innerHTML += `<a href="admin.html" style="background:#ef7a14;color:#fff;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:700">🔧 Admin</a>`;
+    }
     document.getElementById('loginButtons').style.display = 'none';
     document.getElementById('welcomeBox').style.display = 'block';
     document.getElementById('welcomeName').textContent = currentUser.username;
-    if (currentUser.isAdmin) { document.getElementById('adminTag').style.display = 'inline'; document.getElementById('adminPanel').style.display = 'block'; }
-    if (currentUser.roblox_username) { document.getElementById('robloxTag').style.display = 'inline'; document.getElementById('robloxName').textContent = currentUser.roblox_username; }
-    document.getElementById('jelentkezesContent').innerHTML = `<div class="card" style="max-width:560px"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Google Calendar alapú foglalási rendszer — hamarosan éles. Addig jelöld magad az IC csatornán.</p></div>`;
-    // Log page visit
-    fetch(WORKER_URL + '/log', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() }, body: JSON.stringify({ action: 'page_visit_index' }) }).catch(()=>{});
+    if (currentUser.isAdmin) document.getElementById('adminTag').style.display = 'inline';
+    document.getElementById('jelentkezesContent').innerHTML = `<div class="card" style="max-width:560px"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Válassz egy eseményt fenn a listából és kattints a Jelenkezém gombra.</p></div>`;
+  }
+
+  async function loadTodayEvents() {
+    const list = document.getElementById('eventList');
+    try {
+      const res = await fetch(WORKER_URL + '/events');
+      const events = await res.json();
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const todayEnd = todayStart + 86400000;
+      const today = events.filter(e => e.start_time >= todayStart && e.start_time < todayEnd);
+      if (!today.length) { list.innerHTML = '<p class="empty-events">Ma nincsenek események. 🌟</p>'; return; }
+      list.innerHTML = today.map(e => {
+        const start = new Date(e.start_time).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Budapest' });
+        const end = new Date(e.end_time).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Budapest' });
+        const typeClass = `event-type-${e.type}`;
+        const bookBtn = currentUser && e.type !== 'lezaras'
+          ? `<a href="foglalas.html?event=${e.id}" class="book-btn">✅ Jelenkezém</a>` : '';
+        return `<div class="event-card ${typeClass}">
+          <div><h3>${e.title}</h3><p>${e.description || ''}</p></div>
+          <div class="event-meta">
+            <div class="event-time">${start} – ${end}</div><br>${bookBtn}
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) { list.innerHTML = '<p class="empty-events">Nem sikerült betölteni az eseményeket.</p>'; }
   }
 
   function logout() { clearToken(); currentUser = null; location.reload(); }
-
-  function addNotice() {
-    if (!currentUser || !currentUser.isAdmin) return;
-    const title = document.getElementById('noticeTitle').value.trim();
-    const time = document.getElementById('noticeTime').value.trim();
-    const desc = document.getElementById('noticeDesc').value.trim();
-    if (!title || !time) return alert('Cím és idő kötelező!');
-    const item = document.createElement('div');
-    item.className = 'notice-item';
-    item.innerHTML = `<div><strong>${title}</strong><p>${desc}</p></div><span class="time">${time}</span>`;
-    document.getElementById('noticeList').prepend(item);
-    document.getElementById('noticeTitle').value = '';
-    document.getElementById('noticeTime').value = '';
-    document.getElementById('noticeDesc').value = '';
-  }
-
   document.getElementById('discordLoginBtn').href = DISCORD_OAUTH_URL;
   document.getElementById('discordLoginBtn2').href = DISCORD_OAUTH_URL;
   checkLogin();

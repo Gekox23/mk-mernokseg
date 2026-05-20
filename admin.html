@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel – MK Mérnökség</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5}
+    header{background:#121d2e;border-bottom:1px solid #243347;padding:14px 28px;display:flex;justify-content:space-between;align-items:center}
+    .brand{font-size:17px;font-weight:700}.brand span{color:#ef7a14}
+    .logout{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+    .container{max-width:960px;margin:36px auto;padding:0 20px}
+    h2{font-size:20px;color:#ef7a14;margin-bottom:18px}
+    .panel{background:#162233;border:1px solid #243347;border-radius:16px;padding:24px;margin-bottom:28px}
+    .panel h3{font-size:16px;margin-bottom:14px;color:#dce8f5}
+    label{display:block;font-size:13px;color:#8fa4bc;margin-bottom:4px;margin-top:10px}
+    input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #2b4668;background:#0f1826;color:#dce8f5;font-size:14px}
+    textarea{resize:vertical;min-height:70px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .btn{padding:11px 22px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer}
+    .btn-primary{background:#ef7a14;color:#fff;margin-top:14px}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .success{background:#0d2b1e;border:1px solid #166534;border-radius:8px;padding:10px;color:#86efac;font-size:13px;margin-top:10px;display:none}
+    .error{background:#2c1215;border:1px solid #5c1a1a;border-radius:8px;padding:10px;color:#f87171;font-size:13px;margin-top:10px;display:none}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:8px 10px;color:#8fa4bc;border-bottom:1px solid #243347}
+    td{padding:9px 10px;border-bottom:1px solid #1a2c42}
+    .badge{padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700}
+    .badge-toborzas{background:#2c1e0e;color:#ffb86c}
+    .badge-foglalas{background:#0d2b1e;color:#86efac}
+    .no-access{display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:16px}
+    .no-access h2{color:#f87171}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">MK <span>Admin Panel</span></div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="adminName" style="font-size:13px;color:#8fa4bc"></span>
+    <button class="logout" onclick="logout()">Kilépés</button>
+  </div>
+</header>
+
+<div class="container" id="mainContent" style="display:none">
+  <h2>🔧 Admin Panel</h2>
+
+  <!-- Új esemény létrehozása -->
+  <div class="panel">
+    <h3>📅 Új esemény létrehozása</h3>
+    <label>Ésemény típusa</label>
+    <select id="evType">
+      <option value="toborzas">🎮 Tobörzés (mindenki kap email értesítőt)</option>
+      <option value="foglalas">📅 Időpontfoglalás (egyedi jelenkezés)</option>
+      <option value="lezaras">🚧 Útzarás / napi infó</option>
+    </select>
+    <label>Cím</label>
+    <input type="text" id="evTitle" placeholder="pl. Tobörzési nap – június 1.">
+    <label>Leírás</label>
+    <textarea id="evDesc" placeholder="Részletek, tudnivalók..."></textarea>
+    <div class="row">
+      <div>
+        <label>Kezdés</label>
+        <input type="datetime-local" id="evStart">
+      </div>
+      <div>
+        <label>Vége</label>
+        <input type="datetime-local" id="evEnd">
+      </div>
+    </div>
+    <label>Max. fő (0 = korlátlan)</label>
+    <input type="number" id="evSlots" value="0" min="0">
+    <button class="btn btn-primary" id="createBtn" onclick="createEvent()">Esemény létrehozása &amp; Email küldése</button>
+    <div class="success" id="createOk"></div>
+    <div class="error" id="createErr"></div>
+  </div>
+
+  <!-- Események listája -->
+  <div class="panel">
+    <h3>📊 Események</h3>
+    <table>
+      <thead><tr><th>Cím</th><th>Típus</th><th>Időpont</th><th>Jelenkezők</th><th>Link</th></tr></thead>
+      <tbody id="eventsTable"><tr><td colspan="5" style="color:#4a6580">Betöltés...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Felhasználók -->
+  <div class="panel">
+    <h3>👥 Regisztrált felhasználók</h3>
+    <table>
+      <thead><tr><th>Discord</th><th>Email</th><th>Admin</th><th>Regisztrált</th></tr></thead>
+      <tbody id="usersTable"><tr><td colspan="4" style="color:#4a6580">Betöltés...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="no-access" id="noAccess" style="display:none">
+  <h2>⛔ Nincs hozzáférésed</h2>
+  <p style="color:#8fa4bc">Ez az oldal csak adminok számára elérhető.</p>
+  <a href="index.html" style="color:#ef7a14">Vissza a főoldalra</a>
+</div>
+
+<script>
+  const WORKER = 'https://mk.gekox1111.workers.dev';
+  let token = localStorage.getItem('mk_token');
+  let user = null;
+
+  async function init() {
+    if (!token) { window.location.href = 'index.html'; return; }
+    const res = await fetch(WORKER + '/me', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { window.location.href = 'index.html'; return; }
+    user = await res.json();
+    if (!user.isAdmin) { document.getElementById('noAccess').style.display = 'flex'; return; }
+    document.getElementById('adminName').textContent = user.username;
+    document.getElementById('mainContent').style.display = 'block';
+    loadEvents();
+    loadUsers();
+  }
+
+  async function createEvent() {
+    const btn = document.getElementById('createBtn');
+    const ok = document.getElementById('createOk');
+    const err = document.getElementById('createErr');
+    ok.style.display = 'none'; err.style.display = 'none';
+    const title = document.getElementById('evTitle').value.trim();
+    const desc = document.getElementById('evDesc').value.trim();
+    const type = document.getElementById('evType').value;
+    const start = document.getElementById('evStart').value;
+    const end = document.getElementById('evEnd').value;
+    const slots = parseInt(document.getElementById('evSlots').value) || 0;
+    if (!title || !start || !end) { err.textContent = 'Cím, kezdés és vége kötelező!'; err.style.display='block'; return; }
+    btn.disabled = true; btn.textContent = 'Küldés...';
+    const res = await fetch(WORKER + '/event/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ title, description: desc, type, start_time: new Date(start).getTime(), end_time: new Date(end).getTime(), max_slots: slots })
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Esemény létrehozása & Email küldése';
+    if (!res.ok) { err.textContent = data.error || 'Hiba'; err.style.display='block'; return; }
+    ok.textContent = type === 'toborzas' ? '✅ Esemény létrehozva és email kiértésítő elküldve mindenkinek!' : '✅ Esemény létrehozva!';
+    ok.style.display = 'block';
+    document.getElementById('evTitle').value = '';
+    document.getElementById('evDesc').value = '';
+    loadEvents();
+  }
+
+  async function loadEvents() {
+    const res = await fetch(WORKER + '/events');
+    const events = await res.json();
+    const tbody = document.getElementById('eventsTable');
+    if (!events.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:#4a6580">Nincs esemény</td></tr>'; return; }
+    tbody.innerHTML = events.map(e => {
+      const start = new Date(e.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
+      const badge = e.type === 'toborzas' ? 'badge-toborzas' : 'badge-foglalas';
+      const typeLabel = e.type === 'toborzas' ? 'Tobörzés' : e.type === 'foglalas' ? 'Foglalás' : 'Infó';
+      return `<tr><td>${e.title}</td><td><span class="badge ${badge}">${typeLabel}</span></td><td>${start}</td><td>-</td><td><a href="foglalas.html?event=${e.id}" target="_blank" style="color:#ef7a14">Link</a></td></tr>`;
+    }).join('');
+  }
+
+  async function loadUsers() {
+    const res = await fetch(WORKER + '/admin/users', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return;
+    const users = await res.json();
+    const tbody = document.getElementById('usersTable');
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:#4a6580">Nincs felhasználó</td></tr>'; return; }
+    tbody.innerHTML = users.map(u => `<tr><td>${u.discord_username || '-'}</td><td>${u.email || '-'}</td><td>${u.is_admin ? '✅' : ''}</td><td>${new Date(u.created_at).toLocaleDateString('hu-HU')}</td></tr>`).join('');
+  }
+
+  function logout() { localStorage.removeItem('mk_token'); window.location.href = 'index.html'; }
+  init();
+</script>
+</body>
+</html>
