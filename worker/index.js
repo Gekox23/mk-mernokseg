@@ -2,10 +2,12 @@
 // Mezőkovácsházi Mérnökség - Full Worker Backend
 // Bindings: DB (D1)
 // Vars: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, REDIRECT_URI, JWT_SECRET
-//       GOOGLE_SERVICE_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID
+//       DISCORD_WEBHOOK (opcionális, értesítőkhez)
 // =============================================
 
 const ADMINS = ['daniell5818'];
+const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
+
 const CORS = {
   'Access-Control-Allow-Origin': 'https://gekox23.github.io',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -17,6 +19,26 @@ function jsonRes(data, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json', ...CORS },
   });
+}
+
+async function sendDiscordWebhook(content) {
+  try {
+    await fetch(DISCORD_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+  } catch (_) {}
+}
+
+async function sendDiscordEmbed(embed) {
+  try {
+    await fetch(DISCORD_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+  } catch (_) {}
 }
 
 export default {
@@ -49,7 +71,7 @@ async function initDB(env) {
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, action TEXT, ip TEXT, user_agent TEXT, created_at INTEGER)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, username TEXT, avatar TEXT, message TEXT, created_at INTEGER)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, title TEXT, description TEXT, type TEXT, start_time INTEGER, end_time INTEGER, max_slots INTEGER DEFAULT 0, created_by TEXT, created_at INTEGER)').run();
-  await env.DB.prepare('CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, user_id TEXT, email TEXT, username TEXT, calendar_event_id TEXT, created_at INTEGER)').run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, user_id TEXT, email TEXT, username TEXT, created_at INTEGER)').run();
 }
 
 // ---- Admin: list users ----
@@ -68,64 +90,18 @@ async function handleDeleteEvent(request, env) {
   const body = await request.json();
   const { event_id } = body;
   if (!event_id) return jsonRes({ error: 'Hiányzó event_id' }, 400);
+  const ev = await env.DB.prepare('SELECT title FROM events WHERE id=?1').bind(event_id).first();
   await env.DB.prepare('DELETE FROM bookings WHERE event_id=?1').bind(event_id).run();
   await env.DB.prepare('DELETE FROM events WHERE id=?1').bind(event_id).run();
+  if (ev) {
+    await sendDiscordEmbed({
+      title: '🗑️ Esemény törölve',
+      description: `**${ev.title}** eseményt törölte: **${user.username}**`,
+      color: 0xe74c3c,
+      timestamp: new Date().toISOString(),
+    });
+  }
   return jsonRes({ ok: true });
-}
-
-// ---- Google Auth ----
-async function getGoogleToken(env) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  const claim = btoa(JSON.stringify({
-    iss: env.GOOGLE_SERVICE_EMAIL,
-    scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600, iat: now
-  })).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  const unsigned = `${header}.${claim}`;
-  const pemKey = env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
-  const pemBody = pemKey.replace('-----BEGIN PRIVATE KEY-----','').replace('-----END PRIVATE KEY-----','').replace(/\s/g,'');
-  const binaryKey = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
-  const key = await crypto.subtle.importKey('pkcs8', binaryKey, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  const jwt = `${unsigned}.${sigB64}`;
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt })
-  });
-  const data = await res.json();
-  return data.access_token;
-}
-
-// ---- Calendar helpers ----
-async function createCalendarEvent(env, token, title, description, startTime, endTime, attendeeEmail) {
-  const event = {
-    summary: title, description,
-    start: { dateTime: new Date(startTime).toISOString(), timeZone: 'Europe/Budapest' },
-    end: { dateTime: new Date(endTime).toISOString(), timeZone: 'Europe/Budapest' },
-    attendees: attendeeEmail ? [{ email: attendeeEmail }] : [],
-    reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 60 }, { method: 'popup', minutes: 30 }] }
-  };
-  const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(env.GOOGLE_CALENDAR_ID)}/events?sendUpdates=all`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(event)
-  });
-  return await res.json();
-}
-
-// ---- Email helper (Gmail API) ----
-async function sendEmail(env, token, to, subject, htmlBody) {
-  const msg = [`To: ${to}`, `Subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=utf-8', '', htmlBody].join('\r\n');
-  const encoded = btoa(unescape(encodeURIComponent(msg))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  await fetch(`https://gmail.googleapis.com/gmail/v1/users/${env.GOOGLE_SERVICE_EMAIL}/messages/send`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ raw: encoded })
-  });
 }
 
 // ---- GET /events ----
@@ -145,25 +121,26 @@ async function handleCreateEvent(request, env) {
   const id = crypto.randomUUID();
   await env.DB.prepare('INSERT INTO events (id, title, description, type, start_time, end_time, max_slots, created_by, created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)')
     .bind(id, title, description || '', type, start_time, end_time, max_slots || 0, user.id, Date.now()).run();
-  if (type === 'toborzas') {
-    const users = await env.DB.prepare('SELECT email, discord_username FROM users WHERE email IS NOT NULL').all();
-    const gtoken = await getGoogleToken(env);
-    const startStr = new Date(start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-    for (const u of users.results) {
-      if (!u.email) continue;
-      const unsubUrl = `https://mk.gekox1111.workers.dev/event/unsubscribe?email=${encodeURIComponent(u.email)}`;
-      await sendEmail(env, gtoken, u.email, `🎮 Tobörzés – ${title}`,
-        `<div style="font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;padding:32px;border-radius:16px;max-width:520px">
-          <h2 style="color:#ef7a14">🎮 Új Tobörzés!</h2>
-          <h3 style="margin:8px 0">${title}</h3>
-          <p style="color:#8fa4bc">${description || ''}</p>
-          <p style="margin-top:16px"><b>⏰ Időpont:</b> ${startStr}</p>
-          <a href="https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}" style="display:inline-block;margin-top:20px;padding:12px 28px;background:#ef7a14;color:#fff;border-radius:10px;text-decoration:none;font-weight:700">✅ Jelentkezem</a>
-          <p style="margin-top:24px;font-size:12px;color:#4a6580"><a href="${unsubUrl}" style="color:#4a6580">Leiratkozás</a></p>
-        </div>`
-      );
-    }
-  }
+
+  const startStr = new Date(start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
+  const endStr   = new Date(end_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
+  const typeLabel = type === 'toborzas' ? '🎮 Tobörzés' : type === 'foglalas' ? '📅 Időpontfoglalás' : '🚧 Útzarás / infó';
+  const bookUrl = `https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}`;
+
+  await sendDiscordEmbed({
+    title: `${typeLabel}: ${title}`,
+    description: description || '',
+    color: type === 'toborzas' ? 0xef7a14 : type === 'foglalas' ? 0x22c55e : 0x3b82f6,
+    fields: [
+      { name: '⏰ Kezdés', value: startStr, inline: true },
+      { name: '⏳ Vége', value: endStr, inline: true },
+      { name: '👥 Max. fő', value: max_slots > 0 ? String(max_slots) : 'Korlátlan', inline: true },
+      { name: '🔗 Jelentkezés', value: `[Kattints ide](${bookUrl})` },
+    ],
+    footer: { text: `Létrehozta: ${user.username}` },
+    timestamp: new Date().toISOString(),
+  });
+
   return jsonRes({ ok: true, id });
 }
 
@@ -172,7 +149,6 @@ async function handleBookSlot(request, env) {
   if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
   const user = await authUser(request, env);
   if (!user) return jsonRes({ error: 'Belépés szükséges!' }, 401);
-  if (!user.email) return jsonRes({ error: 'Nincs email címed! Jelentkezz be Discord-dal.' }, 400);
   const body = await request.json();
   const { event_id } = body;
   if (!event_id) return jsonRes({ error: 'Hiányzó event_id' }, 400);
@@ -184,23 +160,22 @@ async function handleBookSlot(request, env) {
     const count = await env.DB.prepare('SELECT COUNT(*) as c FROM bookings WHERE event_id=?1').bind(event_id).first();
     if (count.c >= event.max_slots) return jsonRes({ error: 'Nincs több szabad hely!' }, 400);
   }
-  const gtoken = await getGoogleToken(env);
-  const calEvent = await createCalendarEvent(env, gtoken, event.title, event.description, event.start_time, event.end_time, user.email);
-  await env.DB.prepare('INSERT INTO bookings (event_id, user_id, email, username, calendar_event_id, created_at) VALUES (?1,?2,?3,?4,?5,?6)')
-    .bind(event_id, user.id, user.email, user.username, calEvent.id || '', Date.now()).run();
+  await env.DB.prepare('INSERT INTO bookings (event_id, user_id, email, username, created_at) VALUES (?1,?2,?3,?4,?5)')
+    .bind(event_id, user.id, user.email || '', user.username, Date.now()).run();
+
   const startStr = new Date(event.start_time).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
-  const unsubUrl = `https://mk.gekox1111.workers.dev/event/unsubscribe?email=${encodeURIComponent(user.email)}`;
-  await sendEmail(env, gtoken, user.email, `✅ Sikeres jelentkezés – ${event.title}`,
-    `<div style="font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;padding:32px;border-radius:16px;max-width:520px">
-      <h2 style="color:#22c55e">✅ Sikeres jelentkezés!</h2>
-      <h3>${event.title}</h3>
-      <p style="color:#8fa4bc">${event.description || ''}</p>
-      <p style="margin-top:16px"><b>⏰ Időpont:</b> ${startStr}</p>
-      <p style="margin-top:8px;color:#8fa4bc">A Google Calendar meghívót elküldük az email címedre.</p>
-      <p style="margin-top:24px;font-size:12px;color:#4a6580"><a href="${unsubUrl}" style="color:#4a6580">Leiratkozás</a></p>
-    </div>`
-  );
-  return jsonRes({ ok: true, calendar_event: calEvent.htmlLink || null });
+  await sendDiscordEmbed({
+    title: '✅ Új jelentkezés',
+    description: `**${user.username}** jelentkezett erre: **${event.title}**`,
+    color: 0x22c55e,
+    fields: [
+      { name: '⏰ Időpont', value: startStr, inline: true },
+      { name: '📧 Email', value: user.email || 'nincs', inline: true },
+    ],
+    timestamp: new Date().toISOString(),
+  });
+
+  return jsonRes({ ok: true });
 }
 
 // ---- GET /event/unsubscribe ----
