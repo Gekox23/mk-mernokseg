@@ -6,7 +6,7 @@
 
 const ADMINS = ['daniell5818'];
 
-// Webhook 1: Tobőrzás és Úti tájékoztató kihirdetése
+// Webhook 1: Toborzás és Úti tájékoztató kihirdetése
 const WEBHOOK_EVENTS = 'https://discord.com/api/webhooks/1506767270062457023/Pf-ZYkhTAj1R_QKm4YDB7CfSXLiUXjf1oMNVGxE-i8QVRIWS316fjK4-qgHxk7Pl4tVk';
 // Webhook 2: Oktatás kihirdetése
 const WEBHOOK_OKTATAS = 'https://discord.com/api/webhooks/1506772218556711064/I7nV6_NFGWp0H5mEfq_UHx7ZSTzdopyN_e4re8e-7Ioi6UqXwT4DiwAEkIZCeEmLgcxj';
@@ -117,19 +117,21 @@ async function handleCreateEvent(request, env) {
   const bookUrl  = `https://gekox23.github.io/mk-mernokseg/foglalas.html?event=${id}`;
   const siteUrl  = 'https://gekox23.github.io/mk-mernokseg/';
 
+  // description mező: # cím\nleírás
+  const descBlock = description
+    ? `# ${title}\n${description}`
+    : `# ${title}`;
+
   if (type === 'toborzas') {
     await sendEmbed(WEBHOOK_EVENTS, {
-      title: '🎮 Magyar Közút tobőrzést hirdetett!',
-      description: description
-        ? `${description}\n\u200b`
-        : '​',
+      title: '🎮 Magyar Közút toborzást hirdetett!',
+      description: descBlock,
       color: 0xef7a14,
       fields: [
-        { name: '📌 Esemény neve', value: title, inline: false },
         { name: '⏰ Kezdés', value: startStr, inline: true },
         { name: '⏳ Vége', value: endStr, inline: true },
         { name: '👥 Férőhelyek', value: max_slots > 0 ? `${max_slots} fő` : 'Korlátlan', inline: true },
-        { name: '🔗 Jelentkezés', value: `[✅ Jelentkezem a tobőrzésre!](${bookUrl})`, inline: false },
+        { name: '🔗 Jelentkezés', value: `[✅ Jelentkezem a toborzásra!](${bookUrl})`, inline: false },
       ],
       footer: { text: 'Mezőkovácsházi Mérnökség' },
       timestamp: new Date().toISOString(),
@@ -137,12 +139,10 @@ async function handleCreateEvent(request, env) {
   } else if (type === 'foglalas') {
     await sendEmbed(WEBHOOK_OKTATAS, {
       title: '📚 Új oktatás került meghirdetésre!',
-      description: description
-        ? `${description}\n\u200b`
-        : '​',
+      description: descBlock,
       color: 0x22c55e,
       fields: [
-        { name: '📌 Oktatás neve', value: title, inline: false },
+        { name: '👤 Oktató', value: title, inline: false },
         { name: '⏰ Kezdés', value: startStr, inline: true },
         { name: '⏳ Vége', value: endStr, inline: true },
         { name: '👥 Férőhelyek', value: max_slots > 0 ? `${max_slots} fő` : 'Korlátlan', inline: true },
@@ -152,15 +152,12 @@ async function handleCreateEvent(request, env) {
       timestamp: new Date().toISOString(),
     });
   } else {
-    // lezaras / napi info
+    // lezaras / napi info / uti info
     await sendEmbed(WEBHOOK_EVENTS, {
       title: '🚧 Úti tájékoztatás',
-      description: description
-        ? `${description}\n\u200b`
-        : '​',
+      description: descBlock,
       color: 0x3b82f6,
       fields: [
-        { name: '📌 Megnevezés', value: title, inline: false },
         { name: '⏰ Érvényes ettől', value: startStr, inline: true },
         { name: '⏳ Érvényes eddig', value: endStr, inline: true },
         { name: '🌐 További infó', value: `[Weboldal megnyitása](${siteUrl})`, inline: false },
