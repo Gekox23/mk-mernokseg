@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Segítség – Mezőkovácsházi Mérnökség</title>
+  <link rel="icon" type="image/png" href="assets/sarokLogo.png">
+  <script>history.replaceState(null,'','/mk-mernokseg/chat');</script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;display:flex;flex-direction:column;height:100vh;overflow:hidden}
@@ -20,7 +22,6 @@
     .panel{flex:1;display:none;flex-direction:column;overflow:hidden}
     .panel.active{display:flex}
     .chat-hero{width:100%;max-height:130px;object-fit:cover;flex-shrink:0;opacity:.85}
-    /* AI */
     .ai-body{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
     .ai-msg{max-width:82%;padding:11px 15px;border-radius:14px;font-size:14px;line-height:1.55}
     .ai-msg.bot{background:#162233;border:1px solid #1f3047;align-self:flex-start;border-radius:4px 14px 14px 14px}
@@ -39,7 +40,6 @@
     .sat-yes:hover{background:#166534;color:#fff}
     .sat-no{background:#2c1215;color:#f87171;border:1px solid #7f1d1d}
     .sat-no:hover{background:#7f1d1d;color:#fff}
-    /* live chat */
     .messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
     .msg{display:flex;gap:10px;align-items:flex-start}
     .msg img{width:32px;height:32px;border-radius:50%;border:2px solid #2b4668;flex-shrink:0}
@@ -53,7 +53,6 @@
     .input-area button{padding:10px 16px;background:#5865F2;color:#fff;border:none;border-radius:9px;cursor:pointer;font-weight:700}
     .login-notice{text-align:center;padding:32px;color:#7a94ad;font-size:14px}
     .login-notice a{color:#ef7a14}
-    /* tickets */
     .ticket-list{flex:1;overflow-y:auto;padding:16px}
     .ticket-item{background:#162233;border:1px solid #243347;border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:.15s}
     .ticket-item:hover{border-color:#ef7a14}
@@ -88,16 +87,13 @@
     <img src="assets/sarokLogo.png" alt="logo">
     Mezőkovácsházi <span>&nbsp;Mérnökség</span>
   </div>
-  <a href="index.html">← Főoldal</a>
+  <a href="/mk-mernokseg/">← Főoldal</a>
 </header>
-
 <div class="tabs">
   <div class="tab active" onclick="switchTab('ai')" id="tab-ai">🤖 AI Segítség</div>
   <div class="tab" onclick="switchTab('live')" id="tab-live">💬 Élő chat</div>
   <div class="tab" onclick="switchTab('tickets')" id="tab-tickets">🎫 Ticketek <span class="tab-badge" id="ticketBadge" style="display:none">0</span></div>
 </div>
-
-<!-- ═══════════════ AI PANEL ═══════════════ -->
 <div class="panel active" id="panel-ai">
   <img src="assets/Utinfo.png" alt="Útinfo" class="chat-hero">
   <div class="ai-body" id="aiBody"></div>
@@ -107,8 +103,6 @@
     <button onclick="aiSend()">▶ Küldés</button>
   </div>
 </div>
-
-<!-- ═══════════════ LIVE CHAT PANEL ═══════════════ -->
 <div class="panel" id="panel-live">
   <div class="messages" id="messages"></div>
   <div id="liveInputArea" style="display:none">
@@ -118,18 +112,14 @@
     </div>
   </div>
   <div class="login-notice" id="liveLoginNotice" style="display:none">
-    A chathez <a href="index.html">be kell lépned</a> Discord fiókoddal.
+    A chathez <a href="/mk-mernokseg/">be kell lépned</a> Discord fiókoddal.
   </div>
 </div>
-
-<!-- ═══════════════ TICKETS PANEL ═══════════════ -->
 <div class="panel" id="panel-tickets">
-  <!-- ticket lista nézet -->
   <div id="ticketListView" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <div class="ticket-list" id="ticketListEl"></div>
     <div style="padding:12px 16px;background:#0d1623;border-top:1px solid #243347;flex-shrink:0" id="newTicketRow"></div>
   </div>
-  <!-- ticket chat nézet -->
   <div id="ticketChatView" style="display:none;flex:1;flex-direction:column;overflow:hidden">
     <div id="idleBanner" class="idle-banner" style="display:none">⏳ Várakozás – egy supervisor hamarosan átveszi a ticketedet.</div>
     <div class="ticket-msgs" id="ticketMsgs"></div>
@@ -140,434 +130,103 @@
     </div>
   </div>
 </div>
-
 <script>
-const WORKER_URL = 'https://mk.gekox1111.workers.dev';
-const DISCORD_CLIENT_ID = '1506719802390085778';
-const REDIRECT_URI = encodeURIComponent('https://gekox23.github.io/mk-mernokseg/callback.html');
-const DISCORD_OAUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=email+identify`;
-
-let currentUser = null;
-let activeTicketId = null;
-let ticketPollInterval = null;
-let livePollInterval = null;
-let aiDone = false;
-
-function getToken() { return localStorage.getItem('mk_token'); }
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-// ══════════════ INIT ══════════════
-async function init() {
-  const token = getToken();
-  if (token) {
-    try {
-      const res = await fetch(WORKER_URL + '/me', { headers: { Authorization: 'Bearer ' + token } });
-      if (res.ok) currentUser = await res.json();
-    } catch(e) {}
+const WORKER_URL='https://mk.gekox1111.workers.dev';
+let currentUser=null,activeTicketId=null,ticketPollInterval=null,livePollInterval=null,aiDone=false;
+function getToken(){return localStorage.getItem('mk_token');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+async function init(){
+  const token=getToken();
+  if(token){try{const res=await fetch(WORKER_URL+'/me',{headers:{Authorization:'Bearer '+token}});if(res.ok)currentUser=await res.json();}catch(e){}}
+  aiStart();setupLive();setupTickets();
+}
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='tickets')refreshTickets();
+}
+const AI_GREET='👋 Szia! Én az MK Mérnökség AI asszisztense vagyok. Miben segíthetek?';
+const QUICK_CHIPS=['📅 Mikor lesz esemény?','🚧 Aktív útlezárások','📋 Hogyan jelentkezzek?','👥 Mi az a toborzás?','📚 Mi az az oktatás?'];
+function aiStart(){addAiMsg('bot',AI_GREET);showChips(QUICK_CHIPS);}
+function showChips(chips){const el=document.getElementById('aiChips');el.innerHTML=chips.map(c=>`<div class="chip" onclick="aiChipClick('${esc(c)}')">${esc(c)}</div>`).join('');}
+function hideChips(){document.getElementById('aiChips').innerHTML='';}
+function addAiMsg(type,html){const body=document.getElementById('aiBody');const div=document.createElement('div');div.className='ai-msg '+type;div.innerHTML=html;body.appendChild(div);body.scrollTop=body.scrollHeight;return div;}
+function aiChipClick(text){addAiMsg('user',esc(text));hideChips();handleAiQuery(text);}
+function aiSend(){const inp=document.getElementById('aiInput');const val=inp.value.trim();if(!val)return;inp.value='';addAiMsg('user',esc(val));hideChips();handleAiQuery(val);}
+async function handleAiQuery(q){
+  const lower=q.toLowerCase();
+  if(lower.includes('esemény')||lower.includes('mikor')||lower.includes('program')||lower.includes('toborzás')||lower.includes('oktatás')||lower.includes('lezárás')||lower.includes('útlez')){
+    const loading=addAiMsg('bot','⏳ Betöltöm az eseményeket...');
+    try{const res=await fetch(WORKER_URL+'/events');const events=await res.json();const now=Date.now();const upcoming=events.filter(e=>e.end_time>now).sort((a,b)=>a.start_time-b.start_time).slice(0,6);
+    if(!upcoming.length){loading.innerHTML='🔴 Jelenleg nincs közelgő esemény meghirdetve.';}else{const typeLabel={toborzas:'🎮 Toborzás',foglalas:'📚 Oktatás',lezaras:'🚧 Útlezárás'};let html='<strong>Közelgő események:</strong><br><br>';upcoming.forEach(e=>{const d=new Date(e.start_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});html+=`${typeLabel[e.type]||'📌'} <strong>${esc(e.title)}</strong> – ${d}<br>`;});loading.innerHTML=html;}}catch(err){loading.innerHTML='⚠️ Nem sikerült betölteni az eseményeket.';}
+    showSatisfaction();return;
   }
-  aiStart();
-  setupLive();
-  setupTickets();
-}
-
-// ══════════════ TABS ══════════════
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  document.getElementById('panel-' + name).classList.add('active');
-  if (name === 'tickets') refreshTickets();
-}
-
-// ══════════════ AI ══════════════
-const AI_GREET = '👋 Szia! Én az MK Mérnökség AI asszisztense vagyok. Miben segíthetek?';
-const QUICK_CHIPS = ['📅 Mikor lesz esemény?', '🚧 Aktív útlezárások', '📋 Hogyan jelentkezzek?', '👥 Mi az a toborzás?', '📚 Mi az az oktatás?'];
-
-function aiStart() {
-  addAiMsg('bot', AI_GREET);
-  showChips(QUICK_CHIPS);
-}
-
-function showChips(chips) {
-  const el = document.getElementById('aiChips');
-  el.innerHTML = chips.map(c => `<div class="chip" onclick="aiChipClick('${esc(c)}')">${esc(c)}</div>`).join('');
-}
-
-function hideChips() { document.getElementById('aiChips').innerHTML = ''; }
-
-function addAiMsg(type, html) {
-  const body = document.getElementById('aiBody');
-  const div = document.createElement('div');
-  div.className = 'ai-msg ' + type;
-  div.innerHTML = html;
-  body.appendChild(div);
-  body.scrollTop = body.scrollHeight;
-  return div;
-}
-
-function aiChipClick(text) {
-  addAiMsg('user', esc(text));
-  hideChips();
-  handleAiQuery(text);
-}
-
-function aiSend() {
-  const inp = document.getElementById('aiInput');
-  const val = inp.value.trim();
-  if (!val) return;
-  inp.value = '';
-  addAiMsg('user', esc(val));
-  hideChips();
-  handleAiQuery(val);
-}
-
-async function handleAiQuery(q) {
-  const lower = q.toLowerCase();
-
-  // esemény kérdés
-  if (lower.includes('esemény') || lower.includes('mikor') || lower.includes('program') || lower.includes('toborzás') || lower.includes('oktatás') || lower.includes('lezárás') || lower.includes('útlezár')) {
-    const loading = addAiMsg('bot', '⏳ Betöltöm az eseményeket...');
-    try {
-      const res = await fetch(WORKER_URL + '/events');
-      const events = await res.json();
-      const now = Date.now();
-      const upcoming = events.filter(e => e.end_time > now).sort((a,b) => a.start_time - b.start_time).slice(0, 6);
-      if (!upcoming.length) {
-        loading.innerHTML = '📭 Jelenleg nincs közelgő esemény meghirdetve.';
-      } else {
-        const typeLabel = {toborzas:'🎮 Toborzás', foglalas:'📚 Oktatás', lezaras:'🚧 Útlezárás'};
-        let html = '<strong>Közelgő események:</strong><br><br>';
-        upcoming.forEach(e => {
-          const d = new Date(e.start_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-          html += `${typeLabel[e.type]||'📌'} <strong>${esc(e.title)}</strong> – ${d}<br>`;
-        });
-        loading.innerHTML = html;
-      }
-    } catch(err) {
-      loading.innerHTML = '⚠️ Nem sikerült betölteni az eseményeket.';
-    }
-    showSatisfaction();
-    return;
+  if(lower.includes('jelentkez')||lower.includes('hogyan')||lower.includes('foglal')){addAiMsg('bot','✅ Jelentkezni úgy tudsz:<br><br>1. Lépj be Discord fiókoddal a főoldalon.<br>2. Válaszd ki az eseményt a <strong>Mai események</strong> listából.<br>3. Kattints a <strong>Jelentkezem</strong> gombra.');showSatisfaction();return;}
+  if(lower.includes('toborzás')||lower.includes('toborzas')){addAiMsg('bot','🎮 <strong>Toborzás</strong>: Rendszeres felvételi esemény, ahol új tagokat veszünk fel a Mezőkovácsházi Mérnökségbe. Discord alapú elbeszélgetéssel zajlik. Figyelj az eseménynaptárban a dátumokra!');showSatisfaction();return;}
+  if(lower.includes('oktatás')||lower.includes('tanulás')){addAiMsg('bot','📚 <strong>Oktatás</strong>: Belső képzés meglévő tagok számára. Supervisorok hirdetik meg, és foglalással lehet rá jelentkezni. Az oktatáson részt vevők előnyt szereznek a szakmai fejlődésben.');showSatisfaction();return;}
+  if(lower.includes('útlezárás')||lower.includes('lezárás')||lower.includes('zárva')||lower.includes('útinfo')){
+    const loading=addAiMsg('bot','⏳ Lekérem az aktív útlezárásokat...');
+    try{const res=await fetch(WORKER_URL+'/events');const events=await res.json();const now=Date.now();const active=events.filter(e=>e.type==='lezaras'&&e.start_time<=now&&e.end_time>=now);
+    if(!active.length){loading.innerHTML='✅ Jelenleg nincs aktív útlezárás.';}else{let html='🚧 <strong>Aktív útlezárások:</strong><br><br>';active.forEach(e=>{const end=new Date(e.end_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',hour:'2-digit',minute:'2-digit'});html+=`• <strong>${esc(e.title)}</strong> – ${esc(e.description||'')} (vége: ${end})<br>`;});loading.innerHTML=html;}}catch(err){loading.innerHTML='⚠️ Nem sikerült betölteni az útlezárásokat.';}
+    showSatisfaction();return;
   }
-
-  // jelentkezés
-  if (lower.includes('jelentkez') || lower.includes('hogyan') || lower.includes('foglal')) {
-    addAiMsg('bot', '✅ Jelentkezni úgy tudsz:<br><br>1. Lépj be Discord fiókoddal a főoldalon.<br>2. Válaszd ki az eseményt a <strong>Mai események</strong> listából.<br>3. Kattints a <strong>Jelentkezem</strong> gombra.');
-    showSatisfaction();
-    return;
-  }
-
-  // toborzás
-  if (lower.includes('toborzás') || lower.includes('mi az a toborzás') || lower.includes('toborzas')) {
-    addAiMsg('bot', '🎮 <strong>Toborzás</strong>: Rendszeres felvételi esemény, ahol új tagokat veszünk fel a Mezőkovácsházi Mérnökségbe. Google Meet alapú elbeszélgetéssel zajlik. Figyelj az eseménynaptárban a dátumokra!');
-    showSatisfaction();
-    return;
-  }
-
-  // oktatás
-  if (lower.includes('oktatás') || lower.includes('mi az az oktatás') || lower.includes('tanulás')) {
-    addAiMsg('bot', '📚 <strong>Oktatás</strong>: Belső képzés meglévő tagok számára. Supervisorok hirdeti meg, és foglalással lehet rá jelentkezni. Az oktatáson részt vevők előnyt szereznek a szakmai fejlődésben.');
-    showSatisfaction();
-    return;
-  }
-
-  // útlezárás
-  if (lower.includes('útlezárás') || lower.includes('lezárás') || lower.includes('zárva') || lower.includes('utinfo') || lower.includes('útinfo')) {
-    const loading = addAiMsg('bot', '⏳ Lekérem az aktív útlezárásokat...');
-    try {
-      const res = await fetch(WORKER_URL + '/events');
-      const events = await res.json();
-      const now = Date.now();
-      const active = events.filter(e => e.type === 'lezaras' && e.start_time <= now && e.end_time >= now);
-      if (!active.length) {
-        loading.innerHTML = '✅ Jelenleg nincs aktív útlezárás.';
-      } else {
-        let html = '🚧 <strong>Aktív útlezárások:</strong><br><br>';
-        active.forEach(e => {
-          const end = new Date(e.end_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',hour:'2-digit',minute:'2-digit'});
-          html += `• <strong>${esc(e.title)}</strong> – ${esc(e.description||'')} (vége: ${end})<br>`;
-        });
-        loading.innerHTML = html;
-      }
-    } catch(err) {
-      loading.innerHTML = '⚠️ Nem sikerült betölteni az útlezárásokat.';
-    }
-    showSatisfaction();
-    return;
-  }
-
-  // nem ismert
-  addAiMsg('bot', '🤔 Ezt a kérdést nem tudom pontosan megválaszolni. Próbálj egyet a gyors kérdések közül, vagy kérj élő segítséget!');
-  showSatisfaction();
+  addAiMsg('bot','🤔 Ezt a kérdést nem tudom pontosan megválaszolni. Próbálj egyet a gyors kérdések közül, vagy kérj élő segítséget!');showSatisfaction();
 }
-
-function showSatisfaction() {
-  if (aiDone) return;
-  aiDone = true;
-  const body = document.getElementById('aiBody');
-  const box = document.createElement('div');
-  box.className = 'sat-box';
-  box.innerHTML = `<p>Sikerült megválaszolni a kérdésedet?</p>
-    <div class="sat-btns">
-      <button class="sat-btn sat-yes" onclick="satYes()">✅ Igen, köszönöm!</button>
-      <button class="sat-btn sat-no" onclick="satNo()">❌ Több segítség kell</button>
-    </div>`;
-  body.appendChild(box);
-  body.scrollTop = body.scrollHeight;
+function showSatisfaction(){
+  if(aiDone)return;aiDone=true;
+  const body=document.getElementById('aiBody');const box=document.createElement('div');box.className='sat-box';
+  box.innerHTML=`<p>Sikerült megválaszolni a kérdésedet?</p><div class="sat-btns"><button class="sat-btn sat-yes" onclick="satYes()">✅ Igen, köszönöm!</button><button class="sat-btn sat-no" onclick="satNo()">❌ Több segítség kell</button></div>`;
+  body.appendChild(box);body.scrollTop=body.scrollHeight;
 }
-
-function satYes() {
+function satYes(){document.querySelector('.sat-box').remove();addAiMsg('bot','🎉 Örülök, hogy segíthettem! Ha még kérdésed van, bármikor írj.');aiDone=false;showChips(QUICK_CHIPS);}
+async function satNo(){
   document.querySelector('.sat-box').remove();
-  addAiMsg('bot', '🎉 Örülök, hogy segíthettem! Ha még kérdésed van, bármikor írj.');
-  aiDone = false;
-  showChips(QUICK_CHIPS);
+  if(!currentUser){addAiMsg('bot','⚠️ Élő segítséghez kérjük <a href="/mk-mernokseg/" style="color:#ef7a14">lépj be Discord fiókoddal</a>, majd gyere vissza.');return;}
+  const lastUserMsg=[...document.querySelectorAll('.ai-msg.user')].pop()?.innerText||'Segítség kérés';
+  addAiMsg('bot','⏳ Ticket létrehozása...');
+  try{const res=await fetch(WORKER_URL+'/ticket/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({subject:lastUserMsg.slice(0,100),first_message:lastUserMsg})});const data=await res.json();if(data.ok){addAiMsg('bot','🎫 Ticketedet megnyitottuk! Egy supervisor hamarosan átveszi.<br><br><button onclick="openTicketById(\''+data.id+'\')" style="background:#ef7a14;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700">🎫 Ticket megtekintése</button>');}}catch(e){addAiMsg('bot','⚠️ Nem sikerült ticket létrehozása. Próbáld a Ticketek fülön.');}
+  aiDone=false;
 }
-
-async function satNo() {
-  document.querySelector('.sat-box').remove();
-  if (!currentUser) {
-    addAiMsg('bot', '⚠️ Élő segítséghez kérjük <a href="index.html" style="color:#ef7a14">lépj be Discord fiókoddal</a>, majd gyere vissza.');
-    return;
-  }
-  const lastUserMsg = [...document.querySelectorAll('.ai-msg.user')].pop()?.innerText || 'Segítség kérés';
-  addAiMsg('bot', '⏳ Ticket létrehozása...');
-  try {
-    const res = await fetch(WORKER_URL + '/ticket/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-      body: JSON.stringify({ subject: lastUserMsg.slice(0, 100), first_message: lastUserMsg })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      addAiMsg('bot', '🎫 Ticketedet megnyitottuk! Egy supervisor hamarosan átveszi.<br><br><button onclick="openTicketById(\''+data.id+'\')" style="background:#ef7a14;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700">🎫 Ticket megtekintése</button>');
-    }
-  } catch(e) {
-    addAiMsg('bot', '⚠️ Nem sikerült ticket létrehozása. Próbáld a Ticketek fülön.');
-  }
-  aiDone = false;
+function setupLive(){
+  if(currentUser){document.getElementById('liveInputArea').style.display='block';}else{document.getElementById('liveLoginNotice').style.display='block';}
+  loadMessages();livePollInterval=setInterval(loadMessages,5000);
 }
-
-// ══════════════ LIVE CHAT ══════════════
-function setupLive() {
-  if (currentUser) {
-    document.getElementById('liveInputArea').style.display = 'block';
-  } else {
-    document.getElementById('liveLoginNotice').style.display = 'block';
-  }
-  loadMessages();
-  livePollInterval = setInterval(loadMessages, 5000);
+async function loadMessages(){
+  try{const res=await fetch(WORKER_URL+'/chat/messages');const msgs=await res.json();const container=document.getElementById('messages');const wasBottom=container.scrollHeight-container.scrollTop-container.clientHeight<60;
+  if(!msgs.length){container.innerHTML='<div class="login-notice">Még nincs üzenet. Legyél az első! 👋</div>';return;}
+  container.innerHTML=msgs.map(m=>{const avatar=m.avatar?`<img src="https://cdn.discordapp.com/avatars/${m.user_id}/${m.avatar}.png" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">`:`<img src="https://cdn.discordapp.com/embed/avatars/0.png">`;const time=new Date(m.created_at).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});return `<div class="msg">${avatar}<div class="msg-body"><div class="name"><strong>${esc(m.username)}</strong><span class="time-badge">${time}</span></div><p>${esc(m.message)}</p></div></div>`;}).join('');
+  if(wasBottom)container.scrollTop=container.scrollHeight;}catch(e){}
 }
-
-async function loadMessages() {
-  try {
-    const res = await fetch(WORKER_URL + '/chat/messages');
-    const msgs = await res.json();
-    const container = document.getElementById('messages');
-    const wasBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
-    if (!msgs.length) { container.innerHTML = '<div class="login-notice">Még nincs üzenet. Legyél az első! 👋</div>'; return; }
-    container.innerHTML = msgs.map(m => {
-      const avatar = m.avatar
-        ? `<img src="https://cdn.discordapp.com/avatars/${m.user_id}/${m.avatar}.png" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">`
-        : `<img src="https://cdn.discordapp.com/embed/avatars/0.png">`;
-      const time = new Date(m.created_at).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});
-      return `<div class="msg">${avatar}<div class="msg-body"><div class="name"><strong>${esc(m.username)}</strong><span class="time-badge">${time}</span></div><p>${esc(m.message)}</p></div></div>`;
-    }).join('');
-    if (wasBottom) container.scrollTop = container.scrollHeight;
-  } catch(e) {}
+async function sendMsg(){const input=document.getElementById('msgInput');const msg=input.value.trim();if(!msg||!currentUser)return;input.value='';try{await fetch(WORKER_URL+'/chat/send',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({message:msg})});await loadMessages();}catch(e){}}
+function setupTickets(){const row=document.getElementById('newTicketRow');if(!currentUser){row.innerHTML=`<div class="login-notice" style="padding:10px 0">Tickethez <a href="/mk-mernokseg/">lépj be</a>.</div>`;return;}if(!currentUser.isAdmin&&!currentUser.isSupervisor){row.innerHTML=`<button onclick="openNewTicket()" style="background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">+ Új ticket nyitása</button>`;}}
+async function refreshTickets(){
+  if(!currentUser){document.getElementById('ticketListEl').innerHTML='<div class="empty-note">Bejelentkezés szükséges.</div>';return;}
+  try{const res=await fetch(WORKER_URL+'/ticket/list',{headers:{Authorization:'Bearer '+getToken()}});const tickets=await res.json();const el=document.getElementById('ticketListEl');
+  if(!tickets.length){el.innerHTML='<div class="empty-note">Nincsenek ticketek.</div>';return;}
+  const open=tickets.filter(t=>t.status!=='closed').length;const badge=document.getElementById('ticketBadge');if(open>0){badge.textContent=open;badge.style.display='inline';}else badge.style.display='none';
+  el.innerHTML=tickets.map(t=>{const stMap={idle:'st-idle',open:'st-open',closed:'st-closed'};const stLabel={idle:'⏳ Várakozás',open:'🟢 Nyitva',closed:'⚫ Lezárva'};const d=new Date(t.created_at).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});return `<div class="ticket-item" onclick="openTicketById('${t.id}')"><h4>${esc(t.subject)} <span class="ticket-status ${stMap[t.status]||''}">${stLabel[t.status]||t.status}</span></h4><p>${esc(t.username)} · ${d}${t.claimed_by_name?' · Kezeli: '+esc(t.claimed_by_name):''}</p></div>`;}).join('');}catch(e){}
 }
-
-async function sendMsg() {
-  const input = document.getElementById('msgInput');
-  const msg = input.value.trim();
-  if (!msg || !currentUser) return;
-  input.value = '';
-  try {
-    await fetch(WORKER_URL + '/chat/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-      body: JSON.stringify({ message: msg })
-    });
-    await loadMessages();
-  } catch(e) {}
+async function openTicketById(id){activeTicketId=id;document.getElementById('ticketListView').style.display='none';document.getElementById('ticketChatView').style.display='flex';switchTab('tickets');await loadTicketChat();if(ticketPollInterval)clearInterval(ticketPollInterval);ticketPollInterval=setInterval(loadTicketChat,4000);}
+function openNewTicket(){const subject=prompt('Miben segíthetünk? (röviden)');if(!subject)return;createTicket(subject,'');}
+async function createTicket(subject,firstMsg){try{const res=await fetch(WORKER_URL+'/ticket/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({subject,first_message:firstMsg||subject})});const data=await res.json();if(data.ok)openTicketById(data.id);}catch(e){alert('Hiba a ticket létrehozásakor.');}}
+async function loadTicketChat(){
+  if(!activeTicketId)return;
+  try{const res=await fetch(WORKER_URL+'/ticket/messages?id='+activeTicketId,{headers:{Authorization:'Bearer '+getToken()}});const data=await res.json();const ticket=data.ticket;const msgs=data.messages||[];
+  document.getElementById('idleBanner').style.display=ticket.status==='idle'?'block':'none';
+  const box=document.getElementById('ticketMsgs');const wasBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;
+  box.innerHTML=msgs.map(m=>{const cls=m.is_staff?'staff':(m.user_id===currentUser?.id?'user-msg':'staff');const isSystem=m.username==='SYSTEM'||m.message.startsWith('👋 **');const t=new Date(m.created_at).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});if(isSystem)return `<div class="tmsg system">${esc(m.message)}</div>`;return `<div class="tmsg ${cls}"><div class="tmsg-name">${esc(m.username)} · ${t}</div>${esc(m.message)}</div>`;}).join('');
+  if(wasBottom)box.scrollTop=box.scrollHeight;
+  renderTicketActions(ticket);
+  const inputRow=document.getElementById('ticketInputRow');const canWrite=ticket.status!=='closed'&&(currentUser?.isAdmin||(currentUser?.isSupervisor&&ticket.claimed_by===currentUser.id)||ticket.user_id===currentUser?.id);inputRow.style.display=canWrite?'flex':'none';}catch(e){}
 }
-
-// ══════════════ TICKETS ══════════════
-function setupTickets() {
-  const row = document.getElementById('newTicketRow');
-  if (!currentUser) {
-    row.innerHTML = `<div class="login-notice" style="padding:10px 0">Tickethez <a href="index.html">lépj be</a>.</div>`;
-    return;
-  }
-  if (!currentUser.isAdmin && !currentUser.isSupervisor) {
-    row.innerHTML = `<button onclick="openNewTicket()" style="background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">+ Új ticket nyitása</button>`;
-  }
-}
-
-async function refreshTickets() {
-  if (!currentUser) {
-    document.getElementById('ticketListEl').innerHTML = '<div class="empty-note">Bejelentkezés szükséges.</div>';
-    return;
-  }
-  try {
-    const res = await fetch(WORKER_URL + '/ticket/list', { headers: { Authorization: 'Bearer ' + getToken() } });
-    const tickets = await res.json();
-    const el = document.getElementById('ticketListEl');
-    if (!tickets.length) { el.innerHTML = '<div class="empty-note">Nincsenek ticketek.</div>'; return; }
-    // badge
-    const open = tickets.filter(t => t.status !== 'closed').length;
-    const badge = document.getElementById('ticketBadge');
-    if (open > 0) { badge.textContent = open; badge.style.display = 'inline'; }
-    else badge.style.display = 'none';
-    el.innerHTML = tickets.map(t => {
-      const stMap = {idle:'st-idle',open:'st-open',closed:'st-closed'};
-      const stLabel = {idle:'⏳ Várakozás',open:'🟢 Nyitva',closed:'⚫ Lezárva'};
-      const d = new Date(t.created_at).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      return `<div class="ticket-item" onclick="openTicketById('${t.id}')">
-        <h4>${esc(t.subject)} <span class="ticket-status ${stMap[t.status]||''}">${stLabel[t.status]||t.status}</span></h4>
-        <p>${esc(t.username)} · ${d}${t.claimed_by_name ? ' · Kezeli: '+esc(t.claimed_by_name) : ''}</p>
-      </div>`;
-    }).join('');
-  } catch(e) {}
-}
-
-async function openTicketById(id) {
-  activeTicketId = id;
-  document.getElementById('ticketListView').style.display = 'none';
-  document.getElementById('ticketChatView').style.display = 'flex';
-  switchTab('tickets');
-  await loadTicketChat();
-  if (ticketPollInterval) clearInterval(ticketPollInterval);
-  ticketPollInterval = setInterval(loadTicketChat, 4000);
-}
-
-function openNewTicket() {
-  const subject = prompt('Miben segíthetünk? (röviden)');
-  if (!subject) return;
-  createTicket(subject, '');
-}
-
-async function createTicket(subject, firstMsg) {
-  try {
-    const res = await fetch(WORKER_URL + '/ticket/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-      body: JSON.stringify({ subject, first_message: firstMsg || subject })
-    });
-    const data = await res.json();
-    if (data.ok) openTicketById(data.id);
-  } catch(e) { alert('Hiba a ticket létrehozásakor.'); }
-}
-
-async function loadTicketChat() {
-  if (!activeTicketId) return;
-  try {
-    const res = await fetch(WORKER_URL + '/ticket/messages?id=' + activeTicketId, { headers: { Authorization: 'Bearer ' + getToken() } });
-    const data = await res.json();
-    const ticket = data.ticket;
-    const msgs = data.messages || [];
-    // idle banner
-    const banner = document.getElementById('idleBanner');
-    banner.style.display = ticket.status === 'idle' ? 'block' : 'none';
-    // messages
-    const box = document.getElementById('ticketMsgs');
-    const wasBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-    box.innerHTML = msgs.map(m => {
-      const cls = m.is_staff ? 'staff' : (m.user_id === currentUser?.id ? 'user-msg' : 'staff');
-      const isSystem = m.username === 'SYSTEM' || m.message.startsWith('👋 **');
-      const t = new Date(m.created_at).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});
-      if (isSystem) return `<div class="tmsg system">${esc(m.message)}</div>`;
-      return `<div class="tmsg ${cls}"><div class="tmsg-name">${esc(m.username)} · ${t}</div>${esc(m.message)}</div>`;
-    }).join('');
-    if (wasBottom) box.scrollTop = box.scrollHeight;
-    // action bar
-    renderTicketActions(ticket);
-    // input row
-    const inputRow = document.getElementById('ticketInputRow');
-    const canWrite = ticket.status !== 'closed' && (
-      currentUser?.isAdmin ||
-      (currentUser?.isSupervisor && ticket.claimed_by === currentUser.id) ||
-      ticket.user_id === currentUser?.id
-    );
-    inputRow.style.display = canWrite ? 'flex' : 'none';
-  } catch(e) {}
-}
-
-function renderTicketActions(ticket) {
-  const bar = document.getElementById('ticketActionBar');
-  const isStaff = currentUser?.isAdmin || currentUser?.isSupervisor;
-  const isClaimer = ticket.claimed_by === currentUser?.id;
-  const isAdmin = currentUser?.isAdmin;
-  let html = `<button class="btn-back" onclick="backToList()">← Vissza</button>`;
-  if (ticket.status !== 'closed') {
-    if (isStaff && !isClaimer && ticket.status === 'idle') {
-      html += `<button class="btn-claim" onclick="claimTicket('${ticket.id}')">🙋 Átveszem</button>`;
-    }
-    if (isAdmin && isClaimer === false && ticket.status === 'open') {
-      html += `<button class="btn-unclaim" onclick="unclaimTicket('${ticket.id}')">↩ Visszaad (admin)</button>`;
-    }
-    if (isStaff && isClaimer || isAdmin) {
-      html += `<button class="btn-close" onclick="closeTicket('${ticket.id}')">🔒 Lezárás</button>`;
-    }
-    // user can close own ticket too
-    if (!isStaff && ticket.user_id === currentUser?.id) {
-      html += `<button class="btn-close" onclick="closeTicket('${ticket.id}')">🔒 Lezárás</button>`;
-    }
-  } else {
-    html += `<span style="color:#4a6580;font-size:13px;padding:9px 0">⚫ Lezárva</span>`;
-  }
-  bar.innerHTML = html;
-}
-
-async function claimTicket(id) {
-  await fetch(WORKER_URL + '/ticket/claim', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-    body: JSON.stringify({ ticket_id: id })
-  });
-  loadTicketChat();
-}
-
-async function unclaimTicket(id) {
-  await fetch(WORKER_URL + '/ticket/unclaim', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-    body: JSON.stringify({ ticket_id: id })
-  });
-  loadTicketChat();
-}
-
-async function closeTicket(id) {
-  if (!confirm('Biztosan lezárod a ticketet? Discord-ra megy a transcript.')) return;
-  await fetch(WORKER_URL + '/ticket/close', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-    body: JSON.stringify({ ticket_id: id })
-  });
-  if (ticketPollInterval) clearInterval(ticketPollInterval);
-  loadTicketChat();
-}
-
-async function ticketSend() {
-  const inp = document.getElementById('ticketMsgInput');
-  const msg = inp.value.trim();
-  if (!msg || !activeTicketId) return;
-  inp.value = '';
-  await fetch(WORKER_URL + '/ticket/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
-    body: JSON.stringify({ ticket_id: activeTicketId, message: msg })
-  });
-  loadTicketChat();
-}
-
-function backToList() {
-  if (ticketPollInterval) clearInterval(ticketPollInterval);
-  activeTicketId = null;
-  document.getElementById('ticketListView').style.display = 'flex';
-  document.getElementById('ticketChatView').style.display = 'none';
-  refreshTickets();
-}
-
+function renderTicketActions(ticket){const bar=document.getElementById('ticketActionBar');const isStaff=currentUser?.isAdmin||currentUser?.isSupervisor;const isClaimer=ticket.claimed_by===currentUser?.id;const isAdmin=currentUser?.isAdmin;let html=`<button class="btn-back" onclick="backToList()">← Vissza</button>`;if(ticket.status!=='closed'){if(isStaff&&!isClaimer&&ticket.status==='idle')html+=`<button class="btn-claim" onclick="claimTicket('${ticket.id}')">🙋 Átveszem</button>`;if(isAdmin&&isClaimer===false&&ticket.status==='open')html+=`<button class="btn-unclaim" onclick="unclaimTicket('${ticket.id}')">↩ Visszaad (admin)</button>`;if(isStaff&&isClaimer||isAdmin)html+=`<button class="btn-close" onclick="closeTicket('${ticket.id}')">🔒 Lezárás</button>`;if(!isStaff&&ticket.user_id===currentUser?.id)html+=`<button class="btn-close" onclick="closeTicket('${ticket.id}')">🔒 Lezárás</button>`;}else{html+=`<span style="color:#4a6580;font-size:13px;padding:9px 0">⚫ Lezárva</span>`;} bar.innerHTML=html;}
+async function claimTicket(id){await fetch(WORKER_URL+'/ticket/claim',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:id})});loadTicketChat();}
+async function unclaimTicket(id){await fetch(WORKER_URL+'/ticket/unclaim',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:id})});loadTicketChat();}
+async function closeTicket(id){if(!confirm('Biztosan lezárod a ticketet?'))return;await fetch(WORKER_URL+'/ticket/close',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:id})});if(ticketPollInterval)clearInterval(ticketPollInterval);loadTicketChat();}
+async function ticketSend(){const inp=document.getElementById('ticketMsgInput');const msg=inp.value.trim();if(!msg||!activeTicketId)return;inp.value='';await fetch(WORKER_URL+'/ticket/send',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:activeTicketId,message:msg})});loadTicketChat();}
+function backToList(){if(ticketPollInterval)clearInterval(ticketPollInterval);activeTicketId=null;document.getElementById('ticketListView').style.display='flex';document.getElementById('ticketChatView').style.display='none';refreshTickets();}
 init();
 </script>
 </body>

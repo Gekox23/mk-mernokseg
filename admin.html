@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel – MK Mérnökség</title>
+  <link rel="icon" type="image/png" href="assets/sarokLogo.png">
+  <script>history.replaceState(null,'','/mk-mernokseg/admin');</script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5}
@@ -50,26 +52,21 @@
   <div class="brand">MK <span>Admin Panel</span></div>
   <div style="display:flex;align-items:center;gap:12px">
     <span id="adminName" style="font-size:13px;color:#8fa4bc"></span>
-    <a href="index.html" style="background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;font-size:13px">← Főoldal</a>
+    <a href="/mk-mernokseg/" style="background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;font-size:13px">← Főoldal</a>
     <button style="background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px" onclick="logout()">Kilépés</button>
   </div>
 </header>
-
-<!-- Edit modal -->
 <div class="modal-bg" id="editModal">
   <div class="modal">
     <h3>✏️ Esemény szerkesztése</h3>
     <input type="hidden" id="editId">
-    <label>Cím *</label>
-    <input type="text" id="editTitle">
-    <label>Leírás</label>
-    <textarea id="editDesc"></textarea>
+    <label>Cím *</label><input type="text" id="editTitle">
+    <label>Leírás</label><textarea id="editDesc"></textarea>
     <div class="row">
       <div><label>Kezdés *</label><input type="datetime-local" id="editStart"></div>
       <div><label>Vége *</label><input type="datetime-local" id="editEnd"></div>
     </div>
-    <label>Max. fő (0 = korlátlan)</label>
-    <input type="number" id="editSlots" min="0">
+    <label>Max. fő (0 = korlátlan)</label><input type="number" id="editSlots" min="0">
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn btn-primary" style="flex:1;margin-top:0" onclick="submitEdit()">Mentés</button>
       <button class="btn" style="flex:1;background:#1a2c42;color:#8fa4bc" onclick="closeEdit()">Mégsem</button>
@@ -77,10 +74,8 @@
     <div class="msg" id="editMsg"></div>
   </div>
 </div>
-
 <div class="container" id="mainContent">
   <h2 id="panelTitle">🔧 Panel</h2>
-
   <div class="panel" id="createPanel">
     <h3>📅 Új esemény létrehozása</h3>
     <label>Esemény típusa</label>
@@ -89,192 +84,78 @@
       <option value="foglalas">📚 Oktatás</option>
       <option value="lezaras">🚧 Úti tájékoztatás</option>
     </select>
-    <label>Cím *</label>
-    <input type="text" id="evTitle" placeholder="pl. Toborzási nap – június 1.">
-    <label>Leírás</label>
-    <textarea id="evDesc" placeholder="Részletek, tudnivalók..."></textarea>
+    <label>Cím *</label><input type="text" id="evTitle" placeholder="pl. Toborzási nap – június 1.">
+    <label>Leírás</label><textarea id="evDesc" placeholder="Részletek, tudnivalók..."></textarea>
     <div class="row">
       <div><label>Kezdés *</label><input type="datetime-local" id="evStart"></div>
       <div><label>Vége *</label><input type="datetime-local" id="evEnd"></div>
     </div>
-    <label>Max. fő (0 = korlátlan)</label>
-    <input type="number" id="evSlots" value="0" min="0">
+    <label>Max. fő (0 = korlátlan)</label><input type="number" id="evSlots" value="0" min="0">
     <button class="btn btn-primary" id="createBtn" onclick="handleCreateEvent()">&#128640; Esemény létrehozása</button>
     <div class="msg" id="createMsg"></div>
   </div>
-
   <div class="panel">
     <h3>📊 Események</h3>
-    <table>
-      <thead><tr><th>Cím</th><th>Típus</th><th>Időpont</th><th>Link</th><th>Műveletek</th></tr></thead>
-      <tbody id="eventsTable"><tr><td colspan="5" style="color:#4a6580">Betöltés...</td></tr></tbody>
-    </table>
+    <table><thead><tr><th>Cím</th><th>Típus</th><th>Időpont</th><th>Link</th><th>Műveletek</th></tr></thead>
+    <tbody id="eventsTable"><tr><td colspan="5" style="color:#4a6580">Betöltés...</td></tr></tbody></table>
   </div>
-
   <div class="panel" id="usersPanel" style="display:none">
     <h3>👥 Felhasználók &amp; Supervisor kezelés</h3>
-    <table>
-      <thead><tr><th>Discord</th><th>Email</th><th>Szerepkör</th><th>Regisztrált</th><th>Supervisor</th></tr></thead>
-      <tbody id="usersTable"><tr><td colspan="5" style="color:#4a6580">Betöltés...</td></tr></tbody>
-    </table>
+    <table><thead><tr><th>Discord</th><th>Email</th><th>Szerepkör</th><th>Regisztrált</th><th>Supervisor</th></tr></thead>
+    <tbody id="usersTable"><tr><td colspan="5" style="color:#4a6580">Betöltés...</td></tr></tbody></table>
   </div>
 </div>
-
 <div class="no-access" id="noAccess" style="display:none">
   <h2>⛔ Nincs hozzáférésed</h2>
   <p style="color:#8fa4bc">Ez az oldal csak adminok és supervisorok számára elérhető.</p>
-  <a href="index.html" style="color:#ef7a14">Vissza a főoldalra</a>
+  <a href="/mk-mernokseg/" style="color:#ef7a14">Vissza a főoldalra</a>
 </div>
-
 <script>
-  const WORKER = 'https://mk.gekox1111.workers.dev';
-  let token = localStorage.getItem('mk_token');
-  let user = null;
-
-  function showMsg(id, type, html) {
-    const el = document.getElementById(id);
-    el.className = 'msg ' + (type==='ok'?'msg-ok':type==='loading'?'msg-loading':'msg-err');
-    el.innerHTML = html;
-    el.style.display = 'block';
-  }
-  function hideMsg(id) { document.getElementById(id).style.display = 'none'; }
-
-  async function init() {
-    if (!token) { showMsg('createMsg','err','❌ Nem vagy bejelentkezve. Lépj be a főoldalon Discorddal.'); document.getElementById('createBtn').disabled=true; return; }
+  const WORKER='https://mk.gekox1111.workers.dev';
+  let token=localStorage.getItem('mk_token'),user=null;
+  function showMsg(id,type,html){const el=document.getElementById(id);el.className='msg '+(type==='ok'?'msg-ok':type==='loading'?'msg-loading':'msg-err');el.innerHTML=html;el.style.display='block';}
+  function hideMsg(id){document.getElementById(id).style.display='none';}
+  async function init(){
+    if(!token){showMsg('createMsg','err','❌ Nem vagy bejelentkezve.');document.getElementById('createBtn').disabled=true;return;}
     showMsg('createMsg','loading','<span class="spinner"></span> Jogosultság ellenőrzése...');
-    try {
-      const res = await fetch(WORKER+'/me',{headers:{Authorization:'Bearer '+token}});
-      if (!res.ok) { showMsg('createMsg','err','❌ Belépés lejárt. Lépj ki és jelentkezz be újra.'); document.getElementById('createBtn').disabled=true; return; }
-      user = await res.json();
-    } catch(e) { showMsg('createMsg','err','⚠️ Szerver elérhető nem.'); return; }
+    try{const res=await fetch(WORKER+'/me',{headers:{Authorization:'Bearer '+token}});if(!res.ok){showMsg('createMsg','err','❌ Belépés lejárt.');document.getElementById('createBtn').disabled=true;return;}user=await res.json();}catch(e){showMsg('createMsg','err','⚠️ Szerver nem elérhető.');return;}
     hideMsg('createMsg');
-    if (!user.isAdmin && !user.isSupervisor) {
-      document.getElementById('mainContent').style.display='none';
-      document.getElementById('noAccess').style.display='flex';
-      return;
-    }
-    document.getElementById('adminName').textContent = (user.isAdmin?'🔒 Admin':'👤 Supervisor')+': '+user.username;
-    document.getElementById('panelTitle').textContent = user.isAdmin ? '🔧 Admin Panel' : '👤 Supervisor Panel';
-    // supervisor csak foglalas-t lát a legordülőben
-    if (!user.isAdmin) {
-      const sel = document.getElementById('evType');
-      [...sel.options].forEach(o => { if (o.value !== 'foglalas') o.remove(); });
-    }
-    if (user.isAdmin) document.getElementById('usersPanel').style.display='block';
-    loadEvents();
-    if (user.isAdmin) loadUsers();
+    if(!user.isAdmin&&!user.isSupervisor){document.getElementById('mainContent').style.display='none';document.getElementById('noAccess').style.display='flex';return;}
+    document.getElementById('adminName').textContent=(user.isAdmin?'🔒 Admin':'👤 Supervisor')+': '+user.username;
+    document.getElementById('panelTitle').textContent=user.isAdmin?'🔧 Admin Panel':'👤 Supervisor Panel';
+    if(!user.isAdmin){const sel=document.getElementById('evType');[...sel.options].forEach(o=>{if(o.value!=='foglalas')o.remove();});}
+    if(user.isAdmin)document.getElementById('usersPanel').style.display='block';
+    loadEvents();if(user.isAdmin)loadUsers();
   }
-
-  async function handleCreateEvent() {
-    const btn = document.getElementById('createBtn');
-    hideMsg('createMsg');
-    const title = document.getElementById('evTitle').value.trim();
-    const desc  = document.getElementById('evDesc').value.trim();
-    const type  = document.getElementById('evType').value;
-    const start = document.getElementById('evStart').value;
-    const end   = document.getElementById('evEnd').value;
-    const slots = parseInt(document.getElementById('evSlots').value)||0;
-    if (!title) { showMsg('createMsg','err','❌ Hiányzó mező: <b>Cím</b> kötelező!'); return; }
-    if (!start) { showMsg('createMsg','err','❌ Hiányzó mező: <b>Kezdés</b> kötelező!'); return; }
-    if (!end)   { showMsg('createMsg','err','❌ Hiányzó mező: <b>Vége</b> kötelező!'); return; }
-    if (new Date(end)<=new Date(start)) { showMsg('createMsg','err','❌ Vége nem lehet korábbi mint kezdés!'); return; }
-    btn.disabled=true;
-    showMsg('createMsg','loading','<span class="spinner"></span> Létrehozás...');
-    try {
-      const res = await fetch(WORKER+'/event/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({title,description:desc,type,start_time:new Date(start).getTime(),end_time:new Date(end).getTime(),max_slots:slots})});
-      const data = await res.json();
-      if (!res.ok) showMsg('createMsg','err',`❌ ${data.error||'Ismeretlen hiba'}`);
-      else {
-        showMsg('createMsg','ok','✅ <b>Esemény létrehozva!</b> Discord értesítő elküldve.');
-        ['evTitle','evDesc','evStart','evEnd'].forEach(id=>document.getElementById(id).value='');
-        document.getElementById('evSlots').value='0';
-        loadEvents();
-      }
-    } catch(e) { showMsg('createMsg','err',`❌ Hálózati hiba: ${e.message}`); }
+  async function handleCreateEvent(){
+    const btn=document.getElementById('createBtn');hideMsg('createMsg');
+    const title=document.getElementById('evTitle').value.trim(),desc=document.getElementById('evDesc').value.trim(),type=document.getElementById('evType').value,start=document.getElementById('evStart').value,end=document.getElementById('evEnd').value,slots=parseInt(document.getElementById('evSlots').value)||0;
+    if(!title){showMsg('createMsg','err','❌ Hiányzó mező: <b>Cím</b> kötelező!');return;}
+    if(!start){showMsg('createMsg','err','❌ Hiányzó mező: <b>Kezdés</b> kötelező!');return;}
+    if(!end){showMsg('createMsg','err','❌ Hiányzó mező: <b>Vége</b> kötelező!');return;}
+    if(new Date(end)<=new Date(start)){showMsg('createMsg','err','❌ Vége nem lehet korábbi mint kezdés!');return;}
+    btn.disabled=true;showMsg('createMsg','loading','<span class="spinner"></span> Létrehozás...');
+    try{const res=await fetch(WORKER+'/event/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({title,description:desc,type,start_time:new Date(start).getTime(),end_time:new Date(end).getTime(),max_slots:slots})});const data=await res.json();if(!res.ok)showMsg('createMsg','err',`❌ ${data.error||'Ismeretlen hiba'}`);else{showMsg('createMsg','ok','✅ <b>Esemény létrehozva!</b>');['evTitle','evDesc','evStart','evEnd'].forEach(id=>document.getElementById(id).value='');document.getElementById('evSlots').value='0';loadEvents();}}catch(e){showMsg('createMsg','err',`❌ Hálózati hiba: ${e.message}`);}
     btn.disabled=false;
   }
-
-  function openEdit(ev) {
-    document.getElementById('editId').value = ev.id;
-    document.getElementById('editTitle').value = ev.title;
-    document.getElementById('editDesc').value = ev.description||'';
-    document.getElementById('editStart').value = new Date(ev.start_time - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
-    document.getElementById('editEnd').value   = new Date(ev.end_time   - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
-    document.getElementById('editSlots').value = ev.max_slots||0;
-    hideMsg('editMsg');
-    document.getElementById('editModal').style.display='flex';
-  }
-  function closeEdit() { document.getElementById('editModal').style.display='none'; }
-
-  async function submitEdit() {
-    const id    = document.getElementById('editId').value;
-    const title = document.getElementById('editTitle').value.trim();
-    const desc  = document.getElementById('editDesc').value.trim();
-    const start = document.getElementById('editStart').value;
-    const end   = document.getElementById('editEnd').value;
-    const slots = parseInt(document.getElementById('editSlots').value)||0;
-    if (!title||!start||!end) { showMsg('editMsg','err','❌ Töltsd ki az összes mezőt!'); return; }
-    if (new Date(end)<=new Date(start)) { showMsg('editMsg','err','❌ Vége nem lehet korábbi mint kezdés!'); return; }
+  function openEdit(ev){document.getElementById('editId').value=ev.id;document.getElementById('editTitle').value=ev.title;document.getElementById('editDesc').value=ev.description||'';document.getElementById('editStart').value=new Date(ev.start_time-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);document.getElementById('editEnd').value=new Date(ev.end_time-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);document.getElementById('editSlots').value=ev.max_slots||0;hideMsg('editMsg');document.getElementById('editModal').style.display='flex';}
+  function closeEdit(){document.getElementById('editModal').style.display='none';}
+  async function submitEdit(){
+    const id=document.getElementById('editId').value,title=document.getElementById('editTitle').value.trim(),desc=document.getElementById('editDesc').value.trim(),start=document.getElementById('editStart').value,end=document.getElementById('editEnd').value,slots=parseInt(document.getElementById('editSlots').value)||0;
+    if(!title||!start||!end){showMsg('editMsg','err','❌ Töltsd ki az összes mezőt!');return;}
+    if(new Date(end)<=new Date(start)){showMsg('editMsg','err','❌ Vége nem lehet korábbi mint kezdés!');return;}
     showMsg('editMsg','loading','<span class="spinner"></span> Mentés...');
-    try {
-      const res = await fetch(WORKER+'/event/update',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({event_id:id,title,description:desc,start_time:new Date(start).getTime(),end_time:new Date(end).getTime(),max_slots:slots})});
-      const data = await res.json();
-      if (!res.ok) showMsg('editMsg','err',`❌ ${data.error||'Hiba'}`)
-      else { showMsg('editMsg','ok','✅ Mentve!'); loadEvents(); setTimeout(closeEdit,1200); }
-    } catch(e) { showMsg('editMsg','err',`❌ Hálózati hiba`); }
+    try{const res=await fetch(WORKER+'/event/update',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({event_id:id,title,description:desc,start_time:new Date(start).getTime(),end_time:new Date(end).getTime(),max_slots:slots})});const data=await res.json();if(!res.ok)showMsg('editMsg','err',`❌ ${data.error||'Hiba'}`);else{showMsg('editMsg','ok','✅ Mentve!');loadEvents();setTimeout(closeEdit,1200);}}catch(e){showMsg('editMsg','err','❌ Hálózati hiba');}
   }
-
-  async function deleteEvent(id,title) {
-    if (!confirm(`Biztos törölöd?\n"${title}"`)) return;
-    const res = await fetch(WORKER+'/event/delete',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({event_id:id})});
-    const data = await res.json();
-    if (res.ok) loadEvents();
-    else alert('Hiba: '+(data.error||'Ismeretlen'));
+  async function deleteEvent(id,title){if(!confirm(`Biztos törölöd?\n"${title}"`))return;const res=await fetch(WORKER+'/event/delete',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({event_id:id})});const data=await res.json();if(res.ok)loadEvents();else alert('Hiba: '+(data.error||'Ismeretlen'));}
+  async function loadEvents(){
+    try{const res=await fetch(WORKER+'/events');const events=await res.json();const tbody=document.getElementById('eventsTable');if(!events.length){tbody.innerHTML='<tr><td colspan="5" style="color:#4a6580">Nincs esemény</td></tr>';return;}tbody.innerHTML=events.map(e=>{const start=new Date(e.start_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest'});const badgeCls=e.type==='toborzas'?'badge-toborzas':e.type==='foglalas'?'badge-foglalas':'badge-lezaras';const typeLabel=e.type==='toborzas'?'🎮 Toborzás':e.type==='foglalas'?'📚 Oktatás':'🚧 Úti táj.';const linkHref=e.type==='lezaras'?'/mk-mernokseg/':`/mk-mernokseg/foglalas?event=${e.id}`;const canEdit=user.isAdmin||e.created_by===user.id;const editBtn=canEdit?`<button class="btn-edit" onclick='openEdit(${JSON.stringify(e)})'>✏️ Szerk.</button>`:'';const delBtn=canEdit?`<button class="btn-danger" onclick="deleteEvent('${e.id}','${e.title.replace(/'/g,"&apos;")}')">🗑️ Töröl</button>`:'';return `<tr><td>${e.title}</td><td><span class="badge ${badgeCls}">${typeLabel}</span></td><td>${start}</td><td><a href="${linkHref}" style="color:#ef7a14">🔗 Link</a></td><td style="display:flex;gap:6px">${editBtn}${delBtn}</td></tr>`;}).join('');}catch(e){document.getElementById('eventsTable').innerHTML='<tr><td colspan="5" style="color:#f87171">Betöltési hiba</td></tr>';}
   }
-
-  async function loadEvents() {
-    try {
-      const res = await fetch(WORKER+'/events');
-      const events = await res.json();
-      const tbody = document.getElementById('eventsTable');
-      if (!events.length) { tbody.innerHTML='<tr><td colspan="5" style="color:#4a6580">Nincs esemény</td></tr>'; return; }
-      tbody.innerHTML = events.map(e => {
-        const start = new Date(e.start_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest'});
-        const badgeCls = e.type==='toborzas'?'badge-toborzas':e.type==='foglalas'?'badge-foglalas':'badge-lezaras';
-        const typeLabel = e.type==='toborzas'?'🎮 Toborzás':e.type==='foglalas'?'📚 Oktatás':'🚧 Úti táj.';
-        const linkHref = e.type==='lezaras'?'https://gekox23.github.io/mk-mernokseg/':`foglalas.html?event=${e.id}`;
-        const canEdit = user.isAdmin || e.created_by === user.id;
-        const editBtn = canEdit ? `<button class="btn-edit" onclick='openEdit(${JSON.stringify(e)})'>✏️ Szerk.</button>` : '';
-        const delBtn  = canEdit ? `<button class="btn-danger" onclick="deleteEvent('${e.id}','${e.title.replace(/'/g,"&apos;")}')">🗑️ Töröl</button>` : '';
-        return `<tr><td>${e.title}</td><td><span class="badge ${badgeCls}">${typeLabel}</span></td><td>${start}</td><td><a href="${linkHref}" target="_blank" style="color:#ef7a14">🔗 Link</a></td><td style="display:flex;gap:6px">${editBtn}${delBtn}</td></tr>`;
-      }).join('');
-    } catch(e) {
-      document.getElementById('eventsTable').innerHTML='<tr><td colspan="5" style="color:#f87171">Betöltési hiba</td></tr>';
-    }
+  async function loadUsers(){
+    try{const res=await fetch(WORKER+'/admin/users',{headers:{Authorization:'Bearer '+token}});if(!res.ok)return;const users=await res.json();const tbody=document.getElementById('usersTable');if(!users.length){tbody.innerHTML='<tr><td colspan="5" style="color:#4a6580">Nincs felhasználó</td></tr>';return;}tbody.innerHTML=users.map(u=>{const role=u.is_admin?'<span style="color:#ef7a14">🔒 Admin</span>':u.is_supervisor?'<span style="color:#93c5fd">👤 Supervisor</span>':'<span style="color:#4a6580">Felhasználó</span>';const svBtn=!u.is_admin?`<button class="btn-sv" onclick="setSupervisor('${u.id}',${!u.is_supervisor})">${u.is_supervisor?'❌ Elvesz':'✅ Kijelöl'}</button>`:'—';return `<tr><td>${u.discord_username||'-'}</td><td>${u.email||'<span style="color:#4a6580">nincs</span>'}</td><td>${role}</td><td>${new Date(u.created_at).toLocaleDateString('hu-HU')}</td><td>${svBtn}</td></tr>`;}).join('');}catch(e){}
   }
-
-  async function loadUsers() {
-    try {
-      const res = await fetch(WORKER+'/admin/users',{headers:{Authorization:'Bearer '+token}});
-      if (!res.ok) return;
-      const users = await res.json();
-      const tbody = document.getElementById('usersTable');
-      if (!users.length) { tbody.innerHTML='<tr><td colspan="5" style="color:#4a6580">Nincs felhasználó</td></tr>'; return; }
-      tbody.innerHTML = users.map(u => {
-        const role = u.is_admin ? '<span style="color:#ef7a14">🔒 Admin</span>' : u.is_supervisor ? '<span style="color:#93c5fd">👤 Supervisor</span>' : '<span style="color:#4a6580">Felhasználó</span>';
-        const svBtn = !u.is_admin ? `<button class="btn-sv" onclick="setSupervisor('${u.id}',${!u.is_supervisor})">${u.is_supervisor?'❌ Elvesz':'✅ Kijelöl'}</button>` : '—';
-        return `<tr><td>${u.discord_username||'-'}</td><td>${u.email||'<span style="color:#4a6580">nincs</span>'}</td><td>${role}</td><td>${new Date(u.created_at).toLocaleDateString('hu-HU')}</td><td>${svBtn}</td></tr>`;
-      }).join('');
-    } catch(e) {}
-  }
-
-  async function setSupervisor(userId, value) {
-    const res = await fetch(WORKER+'/admin/set-supervisor',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({user_id:userId,value})});
-    if (res.ok) loadUsers();
-    else alert('Hiba!');
-  }
-
-  function logout() { localStorage.removeItem('mk_token'); window.location.href='index.html'; }
+  async function setSupervisor(userId,value){const res=await fetch(WORKER+'/admin/set-supervisor',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({user_id:userId,value})});if(res.ok)loadUsers();else alert('Hiba!');}
+  function logout(){localStorage.removeItem('mk_token');window.location.href='/mk-mernokseg/';}
   init();
 </script>
 </body>
