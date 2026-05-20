@@ -54,7 +54,22 @@
     footer{background:#0c1422;border-top:1px solid #1a2c42;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:48px;font-size:13px;color:#4a6580}
     footer a{color:#4a6580;margin-left:16px}
     footer a:hover{color:#ef7a14}
-    @media(max-width:800px){.hero,.cards{grid-template-columns:1fr}}
+    /* bővítő szekciók */
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+    .info-box{background:#162233;border:1px solid #243347;border-radius:14px;padding:24px}
+    .info-box h3{font-size:16px;margin-bottom:10px;color:#ef7a14}
+    .info-box p{font-size:14px;color:#7a94ad;line-height:1.7}
+    .info-box ul{list-style:none;padding:0;margin-top:10px;display:flex;flex-direction:column;gap:8px}
+    .info-box ul li{font-size:14px;color:#8fa4bc;padding-left:20px;position:relative}
+    .info-box ul li::before{content:'▸';position:absolute;left:0;color:#ef7a14}
+    .highlight-bar{background:linear-gradient(90deg,#1a2c42,#0f1826);border-left:4px solid #ef7a14;border-radius:10px;padding:20px 24px;margin-top:24px}
+    .highlight-bar p{font-size:15px;color:#dce8f5;line-height:1.7}
+    .step-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:24px}
+    .step-box{background:#162233;border:1px solid #243347;border-radius:14px;padding:22px;text-align:center}
+    .step-num{font-size:28px;font-weight:900;color:#ef7a14;margin-bottom:8px}
+    .step-box h4{font-size:14px;font-weight:700;margin-bottom:6px}
+    .step-box p{font-size:13px;color:#7a94ad}
+    @media(max-width:800px){.hero,.cards,.info-grid,.step-row{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -101,22 +116,91 @@
       <img class="card-img" src="assets/csapatmunka.png" alt="Csapatmunka">
       <div class="card-body">
         <h3>Csapatmunka</h3>
-        <p>Útfenntartás, burkolatjavítás és forgalomterelés a Mezőkovácsházi körzetben.</p>
+        <p>Együtt dolgozunk az utakon – legyen szó zárásról, javításról vagy forgalomszervezésről.</p>
       </div>
     </div>
     <div class="card">
       <img class="card-img" src="assets/szaktudás.png" alt="Szaktudás">
       <div class="card-body">
         <h3>Szaktudás</h3>
-        <p>Rendszeres toborzási napok és Google Meet alapú felvételi elbeszélgetések.</p>
+        <p>Belső oktatások és rendszeres toborzási napok – folyamatosan fejlődünk és bővítjük a csapatot.</p>
       </div>
     </div>
     <div class="card" style="cursor:pointer" onclick="window.location.href='chat.html'">
       <img class="card-img" src="assets/Utinfo.png" alt="Segítség / Chat">
       <div class="card-body">
         <h3>💬 Segítség / Chat</h3>
-        <p>Kérdésed van? Írj nekünk a chat felületen, hamarosan válaszolunk.</p>
+        <p>Kérdésed van? Írj nekünk a chat felületen – AI asszisztensünk azonnal válaszol, supervisor is elérhető.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- CSAPATMUNKA szekció -->
+  <h2 style="margin-top:56px">🚧 Csapatmunka</h2>
+  <div class="highlight-bar">
+    <p>A Mezőkovácsházi Mérnökség feladata az RP szerveren belül az útviszonyok biztonságos fenntartása. Csapatértékünk az összehangolt munka: minden tag tudja a feladatát, és mindenki számíthat a másikra.</p>
+  </div>
+  <div class="info-grid">
+    <div class="info-box">
+      <h3>🛣️ Útlezárás és forgalomterelés</h3>
+      <p>Amikor egy útszakasz lezárásra kerül, csapatáltalánosan koordináljuk a forgalmat. A lezárás időtartama, helyszíne és a kerülőút mindig megtalálható az eseménynáptárban.</p>
+      <ul>
+        <li>Előre meghirdetett lezárások</li>
+        <li>Valós idejű útinfo az oldalon</li>
+        <li>Érintett szabadút javaslatok</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h3>🔧 Burkolatjavítás és karbantartás</h3>
+      <p>Az úthibák javítása számos tagot érint egyszerre. Gépészeti csapat, forgalomirlányítók és supervisorok együttműködve végzik a munkaterv szerinti feladatokat.</p>
+      <ul>
+        <li>Munkagépek koordinált alkalmazása</li>
+        <li>Supervisor által irányított körzetmunka</li>
+        <li>Minden művelet dokumentálva</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SZAKTUDÁS szekció -->
+  <h2 style="margin-top:56px">🎓 Szaktudás és fejlődés</h2>
+  <div class="highlight-bar">
+    <p>Nem elégénk meg az alapszinttel. A Mérnökség belső oktatási rendszerével minden tag lehetőséget kap arra, hogy mélyítse tudását – akár a gépek kezelésében, akár a forgalomszervezésben vagy a supervisori feladatokban.</p>
+  </div>
+  <div class="step-row">
+    <div class="step-box">
+      <div class="step-num">01</div>
+      <h4>Toborzás</h4>
+      <p>Rendszeres felvételi alkalmak Discord-on keresztül. A jelentkezők rövid elbeszélgetésen vesznek részt supervisorral.</p>
+    </div>
+    <div class="step-box">
+      <div class="step-num">02</div>
+      <h4>Alap oktatás</h4>
+      <p>Felvétel után minden új tag oktatáson vesz részt: forgalmi szabályok, eszközhasználat, protokoll.</p>
+    </div>
+    <div class="step-box">
+      <div class="step-num">03</div>
+      <h4>Supervisor út</h4>
+      <p>A legaktívabb tagok supervisor képzésen vehetnek részt, és irányító szerepet tölthetnek be a szérben.</p>
+    </div>
+  </div>
+  <div class="info-grid" style="margin-top:18px">
+    <div class="info-box">
+      <h3>📚 Belső oktatási rendszer</h3>
+      <p>A supervisorok rendszeresen tartanak oktatásokat kis csoportokban. Az oktatás időpontja előre meghirdetett, rá foglalással lehet jelentkezni ezen az oldalon.</p>
+      <ul>
+        <li>Práktikus, pályán belüli feladatok</li>
+        <li>Elméleti háttér és szabályzat</li>
+        <li>Vizsgával záruló haladó modulok</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h3>🏅 Elismerés és előrelépés</h3>
+      <p>Aktív részvétel és jó teljesítmény alapján tagjaink előreléphetenek. Az előrelépés átlátható feltételekhez kötött, nem szubjektív döntés eredménye.</p>
+      <ul>
+        <li>Jelenléti és aktivitási pontrendszer</li>
+        <li>Supervisor javaslat alapján</li>
+        <li>Rangértékelés Discord-ban is látható</li>
+      </ul>
     </div>
   </div>
 </section>
