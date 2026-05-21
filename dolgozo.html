@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dolgozói Panel – MK Mérnökség</title>
+  <link rel="icon" type="image/png" href="assets/sarokLogo.png">
+  <script>history.replaceState(null,'','/mk-mernokseg/dolgozo');</script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;min-height:100vh}
+    header{background:#121d2e;border-bottom:1px solid #243347;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+    .brand{font-size:17px;font-weight:700}.brand span{color:#ef7a14}
+    .hdr-right{display:flex;align-items:center;gap:12px}
+    .hdr-right a,.hdr-right button{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none}
+    .layout{display:flex;min-height:calc(100vh - 57px)}
+    /* SIDEBAR */
+    .sidebar{width:240px;background:#0d1520;border-right:1px solid #1a2c42;padding:20px 0;flex-shrink:0}
+    .sidebar-section{padding:6px 18px;font-size:11px;color:#4a6580;text-transform:uppercase;letter-spacing:.08em;margin-top:14px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:14px;color:#8fa4bc;border-left:3px solid transparent;transition:.15s}
+    .nav-item:hover{background:#131f30;color:#dce8f5}
+    .nav-item.active{background:#131f30;color:#ef7a14;border-left-color:#ef7a14}
+    .nav-item .icon{font-size:16px;width:20px;text-align:center}
+    /* MAIN */
+    .main{flex:1;padding:28px 32px;overflow-y:auto}
+    .page{display:none}
+    .page.active{display:block}
+    h2{font-size:20px;color:#ef7a14;margin-bottom:20px}
+    .panel{background:#162233;border:1px solid #243347;border-radius:16px;padding:24px;margin-bottom:24px}
+    .panel h3{font-size:15px;margin-bottom:14px;color:#dce8f5}
+    label{display:block;font-size:13px;color:#8fa4bc;margin-bottom:4px;margin-top:10px}
+    input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #2b4668;background:#0f1826;color:#dce8f5;font-size:14px}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:#ef7a14}
+    textarea{resize:vertical;min-height:80px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .btn{padding:11px 22px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer}
+    .btn-primary{background:#ef7a14;color:#fff;margin-top:14px;width:100%}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-sm{padding:5px 12px;border-radius:7px;border:none;font-size:12px;cursor:pointer;font-weight:700}
+    .btn-edit{background:#1a3a5c;color:#60a5fa}
+    .btn-del{background:#7f1d1d;color:#fca5a5}
+    .msg{border-radius:10px;padding:12px 16px;font-size:14px;margin-top:12px;display:none;line-height:1.5}
+    .msg-ok{background:#0d2b1e;border:1px solid #166534;color:#86efac}
+    .msg-err{background:#2c1215;border:1px solid #5c1a1a;color:#f87171}
+    .msg-loading{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid #8fa4bc;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    /* DASHBOARD CARDS */
+    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+    .dash-card{background:#162233;border:1px solid #243347;border-radius:14px;padding:20px;cursor:pointer;transition:.15s;text-align:center}
+    .dash-card:hover{border-color:#ef7a14;background:#1a2c3e}
+    .dash-card .dc-icon{font-size:28px;margin-bottom:8px}
+    .dash-card .dc-title{font-size:13px;font-weight:700;color:#dce8f5}
+    /* FEED LIST */
+    .feed-item{background:#0f1826;border:1px solid #1a2c42;border-radius:10px;padding:14px 16px;margin-bottom:10px;cursor:pointer}
+    .feed-item:hover{border-color:#2b4668}
+    .feed-title{font-size:14px;font-weight:700;color:#dce8f5;margin-bottom:4px}
+    .feed-meta{font-size:12px;color:#4a6580}
+    .feed-body{font-size:13px;color:#8fa4bc;margin-top:8px;display:none;line-height:1.6}
+    .feed-body.open{display:block}
+    /* BADGE */
+    .badge{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+    .badge-info{background:#0d1e2b;color:#60a5fa}
+    .badge-warn{background:#2c1e0e;color:#ffb86c}
+    .badge-ok{background:#0d2b1e;color:#86efac}
+    .badge-err{background:#2c1215;color:#f87171}
+    /* TABLE */
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:8px 10px;color:#8fa4bc;border-bottom:1px solid #243347}
+    td{padding:9px 10px;border-bottom:1px solid #1a2c42}
+    /* NO ACCESS */
+    .no-access{display:flex;align-items:center;justify-content:center;height:80vh;flex-direction:column;gap:16px}
+    /* FILE INPUT */
+    .file-label{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px dashed #2b4668;background:#0f1826;cursor:pointer;color:#8fa4bc;font-size:13px;margin-top:10px}
+    .file-label:hover{border-color:#ef7a14}
+    .file-label input{display:none}
+    .img-preview{max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;display:none}
+    /* ACCORDION */
+    .acc-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:12px 16px;background:#0f1826;border:1px solid #1a2c42;border-radius:10px;margin-bottom:6px}
+    .acc-header:hover{border-color:#2b4668}
+    .acc-body{display:none;padding:14px 16px;background:#0a1220;border:1px solid #1a2c42;border-top:none;border-radius:0 0 10px 10px;margin-bottom:6px}
+    .acc-body.open{display:block}
+    @media(max-width:700px){.layout{flex-direction:column}.sidebar{width:100%;border-right:none;border-bottom:1px solid #1a2c42;padding:8px 0}.main{padding:16px}.row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">MK <span>Dolgozói Panel</span></div>
+  <div class="hdr-right">
+    <span id="userName" style="font-size:13px;color:#8fa4bc"></span>
+    <a href="/mk-mernokseg/">← Főoldal</a>
+    <button onclick="logout()">Kilépés</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-section">Főoldal</div>
+    <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard"><span class="icon">🏠</span> Dashboard</div>
+
+    <div class="sidebar-section">Projektek & Feladatok</div>
+    <div class="nav-item" onclick="showPage('projektek')" data-page="projektek"><span class="icon">📁</span> Projektek</div>
+    <div class="nav-item" onclick="showPage('feladatok')" data-page="feladatok"><span class="icon">✅</span> Feladataim</div>
+
+    <div class="sidebar-section">Felhívások</div>
+    <div class="nav-item" onclick="showPage('bejelentesek')" data-page="bejelentesek"><span class="icon">📢</span> Bejelentések</div>
+    <div class="nav-item" onclick="showPage('hirek')" data-page="hirek"><span class="icon">📰</span> Hírek</div>
+    <div class="nav-item" onclick="showPage('utasitasok')" data-page="utasitasok"><span class="icon">📋</span> Utasítások</div>
+
+    <div class="sidebar-section">Naplók</div>
+    <div class="nav-item" onclick="showPage('szolgalati')" data-page="szolgalati"><span class="icon">📓</span> Szolgálati napló</div>
+    <div class="nav-item" onclick="showPage('tankolas')" data-page="tankolas"><span class="icon">⛽</span> Tankolás napló</div>
+    <div class="nav-item" onclick="showPage('tarolo')" data-page="tarolo"><span class="icon">🏪</span> Tároló napló</div>
+
+    <div class="sidebar-section">Kérelmek</div>
+    <div class="nav-item" onclick="showPage('szabadsag')" data-page="szabadsag"><span class="icon">🏖️</span> Szabadság</div>
+    <div class="nav-item" onclick="showPage('felmondas')" data-page="felmondas"><span class="icon">📤</span> Felmondás</div>
+
+    <div class="sidebar-section">Egyéb</div>
+    <div class="nav-item" onclick="showPage('palyazatok')" data-page="palyazatok"><span class="icon">💡</span> Pályázatok</div>
+    <div class="nav-item" onclick="showPage('jelentes')" data-page="jelentes"><span class="icon">📊</span> Jelentés</div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <h2>👋 Üdvözöllek, <span id="dashName">...</span>!</h2>
+      <div class="dash-grid">
+        <div class="dash-card" onclick="showPage('projektek')"><div class="dc-icon">📁</div><div class="dc-title">Projektek</div></div>
+        <div class="dash-card" onclick="showPage('feladatok')"><div class="dc-icon">✅</div><div class="dc-title">Feladataim</div></div>
+        <div class="dash-card" onclick="showPage('bejelentesek')"><div class="dc-icon">📢</div><div class="dc-title">Bejelentések</div></div>
+        <div class="dash-card" onclick="showPage('hirek')"><div class="dc-icon">📰</div><div class="dc-title">Hírek</div></div>
+        <div class="dash-card" onclick="showPage('szolgalati')"><div class="dc-icon">📓</div><div class="dc-title">Szolgálati napló</div></div>
+        <div class="dash-card" onclick="showPage('tankolas')"><div class="dc-icon">⛽</div><div class="dc-title">Tankolás napló</div></div>
+        <div class="dash-card" onclick="showPage('tarolo')"><div class="dc-icon">🏪</div><div class="dc-title">Tároló napló</div></div>
+        <div class="dash-card" onclick="showPage('szabadsag')"><div class="dc-icon">🏖️</div><div class="dc-title">Szabadság</div></div>
+        <div class="dash-card" onclick="showPage('jelentes')"><div class="dc-icon">📊</div><div class="dc-title">Jelentés</div></div>
+        <div class="dash-card" onclick="showPage('palyazatok')"><div class="dc-icon">💡</div><div class="dc-title">Pályázatok</div></div>
+      </div>
+      <div class="panel">
+        <h3>📋 Legutóbbi tevékenységeim</h3>
+        <div id="recentActivity" style="color:#4a6580;font-size:13px">Betöltés...</div>
+      </div>
+    </div>
+
+    <!-- PROJEKTEK -->
+    <div class="page" id="page-projektek">
+      <h2>📁 Projektek</h2>
+      <div class="panel">
+        <h3>🔍 Elérhető projektek</h3>
+        <div id="projektekList" style="color:#4a6580;font-size:13px">Betöltés...</div>
+      </div>
+    </div>
+
+    <!-- FELADATOK -->
+    <div class="page" id="page-feladatok">
+      <h2>✅ Feladataim</h2>
+      <div class="panel">
+        <h3>📌 Hozzám rendelt feladatok</h3>
+        <div id="feladatokList" style="color:#4a6580;font-size:13px">Betöltés...</div>
+      </div>
+    </div>
+
+    <!-- BEJELENTÉSEK -->
+    <div class="page" id="page-bejelentesek">
+      <h2>📢 Bejelentések</h2>
+      <div class="panel">
+        <h3>📋 Összes bejelentés <span style="font-size:11px;color:#4a6580">(kattints a bővítéshez)</span></h3>
+        <div id="bejelentesekFeed">
+          <div style="color:#4a6580;font-size:13px">Betöltés...</div>
+        </div>
+      </div>
+      <!-- SUPERVISOR / ADMIN POST -->
+      <div class="panel" id="bejelentesPost" style="display:none">
+        <h3>✍️ Új bejelentés</h3>
+        <label>Cím *</label><input type="text" id="bejCim" placeholder="Bejelentés címe">
+        <label>Tartalom *</label><textarea id="bejTartalom" placeholder="Bejelentés szövege..."></textarea>
+        <button class="btn btn-primary" onclick="postBejelentes()">📢 Közzétesz</button>
+        <div class="msg" id="bejMsg"></div>
+      </div>
+    </div>
+
+    <!-- HÍREK -->
+    <div class="page" id="page-hirek">
+      <h2>📰 Hírek</h2>
+      <div class="panel">
+        <h3>📋 Összes hír <span style="font-size:11px;color:#4a6580">(kattints a bővítéshez)</span></h3>
+        <div id="hirekFeed"><div style="color:#4a6580;font-size:13px">Betöltés...</div></div>
+      </div>
+      <div class="panel" id="hirPost" style="display:none">
+        <h3>✍️ Új hír</h3>
+        <label>Cím *</label><input type="text" id="hirCim" placeholder="Hír címe">
+        <label>Tartalom *</label><textarea id="hirTartalom" placeholder="Hír szövege..."></textarea>
+        <button class="btn btn-primary" onclick="postHir()">📰 Közzétesz</button>
+        <div class="msg" id="hirMsg"></div>
+      </div>
+    </div>
+
+    <!-- UTASÍTÁSOK -->
+    <div class="page" id="page-utasitasok">
+      <h2>📋 Utasítások</h2>
+      <div class="panel">
+        <h3>📋 Összes utasítás</h3>
+        <div id="utasitasokFeed"><div style="color:#4a6580;font-size:13px">Betöltés...</div></div>
+      </div>
+      <div class="panel" id="utasitasPost" style="display:none">
+        <h3>✍️ Új utasítás</h3>
+        <label>Cím *</label><input type="text" id="utasCim" placeholder="Utasítás címe">
+        <label>Tartalom *</label><textarea id="utasTartalom" placeholder="Utasítás szövege..."></textarea>
+        <button class="btn btn-primary" onclick="postUtasitas()">📋 Közzétesz</button>
+        <div class="msg" id="utasMsg"></div>
+      </div>
+    </div>
+
+    <!-- SZOLGÁLATI NAPLÓ -->
+    <div class="page" id="page-szolgalati">
+      <h2>📓 Szolgálati napló</h2>
+      <div class="panel">
+        <h3>➕ Új bejegyzés</h3>
+        <label>Dátum *</label><input type="date" id="svDate">
+        <label>Elvégzett tevékenység *</label><textarea id="svTevekenyseg" placeholder="Mit végeztem el ma..."></textarea>
+        <label>Megjegyzés</label><textarea id="svMegjegyzes" placeholder="Egyéb megjegyzések..."></textarea>
+        <button class="btn btn-primary" onclick="postSzolgalati()">💾 Rögzítés</button>
+        <div class="msg" id="svMsg"></div>
+      </div>
+      <div class="panel">
+        <h3>📚 Korábbi bejegyzések</h3>
+        <div id="svList" style="color:#4a6580;font-size:13px">Betöltés...</div>
+      </div>
+    </div>
+
+    <!-- TANKOLÁS NAPLÓ -->
+    <div class="page" id="page-tankolas">
+      <h2>⛽ Tankolás napló</h2>
+      <div class="panel">
+        <h3>➕ Tankolás rögzítése</h3>
+        <div class="row">
+          <div><label>Dátum *</label><input type="date" id="tankDatum"></div>
+          <div><label>Rendszám *</label><input type="text" id="tankRendszam" placeholder="pl. ABC-123"></div>
+        </div>
+        <div class="row">
+          <div><label>Liter *</label><input type="number" id="tankLiter" placeholder="pl. 42.5" step="0.1"></div>
+          <div><label>Összeg (Ft) *</label><input type="number" id="tankOsszeg" placeholder="pl. 18000"></div>
+        </div>
+        <label>Töltőállomás</label><input type="text" id="tankAllomas" placeholder="pl. MOL Budapest...">
+        <label>Megjegyzés</label><textarea id="tankMegjegyzes" placeholder="Egyéb info..."></textarea>
+        <label>Nyugta / Fotó</label>
+        <label class="file-label" for="tankKep">📷 Kép feltöltése <input type="file" id="tankKep" accept="image/*" onchange="previewImg(this,'tankPreview')"></label>
+        <img id="tankPreview" class="img-preview">
+        <button class="btn btn-primary" onclick="postTankolas()">⛽ Rögzítés</button>
+        <div class="msg" id="tankMsg"></div>
+      </div>
+      <div class="panel">
+        <h3>📚 Korábbi tankolások</h3>
+        <div id="tankList" style="color:#4a6580;font-size:13px">Betöltés...</div>
+      </div>
+    </div>
+
+    <!-- TÁROLÓ NAPLÓ -->
+    <div class="page" id="page-tarolo">
+      <h2>🏪 Tároló napló</h2>
+      <div class="panel">
+        <h3>➕ Tároló bejegyzés</h3>
+        <div class="row">
+          <div><label>Dátum *</label><input type="date" id="taroDatum"></div>
+          <div><label>Tároló azonosító</label><input type="text" id="taroAzon" placeholder="pl. T-01"></div>
+        </div>
+        <label>Művelet *</label>
+        <select id="taroMuvelet">
+          <option value="bevét">📦 Bevét</option>
+          <option value="kivét">📤 Kivét</option>
+          <option value="ellenőrzés">🔍 Ellenőrzés</option>
+          <option value="egyéb">📝 Egyéb</option>
+        </select>
+        <label>Leírás *</label><textarea id="taroLeiras" placeholder="Mit tároltunk, mennyit..."></textarea>
+        <label>Fotó</label>
+        <label class="file-label" for="taroKep">📷 Kép feltöltése <input type="file" id="taroKep" accept="image/*" onchange="previewImg(this,'taroPreview')"></label>
+        <img id="taroPreview" class="img-preview">
+        <button class="btn btn-primary" onclick="postTarolo()">🏪 Rögzítés</button>
+        <div class="msg" id="taroMsg"></div>
+      </div>
+      <div class="panel">
+        <h3>📚 Korábbi bejegyzések</h3>
+        <div id="taroList" style="color:#4a6580;font-size:13px">Betöltés...</div>
+      </div>
+    </div>
+
+    <!-- SZABADSÁG -->
+    <div class="page" id="page-szabadsag">
+      <h2>🏖️ Szabadság kérvényezés</h2>
+      <div class="panel">
+        <h3>📝 Kérelem beküldése</h3>
+        <div class="row">
+          <div><label>Kezdő dátum *</label><input type="date" id="szabKezd"></div>
+          <div><label>Záró dátum *</label><input type="date" id="szabVeg"></div>
+        </div>
+        <label>Szabadság típusa</label>
+        <select id="szabTipus">
+          <option value="éves szabadság">🏖️ Éves szabadság</option>
+          <option value="betegszabadság">🏥 Betegszabadság</option>
+          <option value="rendkívüli">⚡ Rendkívüli</option>
+          <option value="fizetés nélküli">💸 Fizetés nélküli</option>
+        </select>
+        <label>Indoklás</label><textarea id="szabIndok" placeholder="Opcionális indoklás..."></textarea>
+        <button class="btn btn-primary" onclick="postSzabadsag()">🏖️ Kérelem beküldése</button>
+        <div class="msg" id="szabMsg"></div>
+      </div>
+    </div>
+
+    <!-- FELMONDÁS -->
+    <div class="page" id="page-felmondas">
+      <h2>📤 Felmondás</h2>
+      <div class="panel" style="border-color:#5c1a1a">
+        <h3 style="color:#f87171">⚠️ Felmondási nyilatkozat</h3>
+        <p style="font-size:13px;color:#8fa4bc;margin-bottom:14px">Ez a nyilatkozat azonnal eljut a feletteseidhez. Kérjük, fontold meg alaposan.</p>
+        <label>Utolsó munkanap *</label><input type="date" id="felmDatum">
+        <label>Indoklás *</label><textarea id="felmIndok" placeholder="Miért mondasz fel..."></textarea>
+        <button class="btn btn-primary" style="background:#c0392b" onclick="postFelmondas()">📤 Felmondás beküldése</button>
+        <div class="msg" id="felmMsg"></div>
+      </div>
+    </div>
+
+    <!-- PÁLYÁZATOK -->
+    <div class="page" id="page-palyazatok">
+      <h2>💡 Pályázatok / Ötletláda</h2>
+      <div class="panel">
+        <h3>➕ Új pályázat / ötlet beküldése</h3>
+        <label>Cím *</label><input type="text" id="palyCim" placeholder="Pályázat / ötlet neve">
+        <label>Leírás *</label><textarea id="palyLeiras" placeholder="Részletes leírás..." style="min-height:120px"></textarea>
+        <label>Kategória</label>
+        <select id="palyKategoria">
+          <option value="ötlet">💡 Ötlet</option>
+          <option value="fejlesztés">🔧 Fejlesztési javaslat</option>
+          <option value="pályázat">📄 Pályázat</option>
+          <option value="egyéb">📝 Egyéb</option>
+        </select>
+        <button class="btn btn-primary" onclick="postPalyazat()">💡 Beküldés</button>
+        <div class="msg" id="palyMsg"></div>
+      </div>
+      <div class="panel">
+        <h3>📋 Összes pályázat / ötlet</h3>
+        <div id="palyazatokList" style="color:#4a6580;font-size:13px">Betöltés...</div>
+      </div>
+    </div>
+
+    <!-- JELENTÉS -->
+    <div class="page" id="page-jelentes">
+      <h2>📊 Jelentés beküldése</h2>
+      <div class="panel">
+        <h3>➕ Új jelentés</h3>
+        <label>Cím *</label><input type="text" id="jelCim" placeholder="Jelentés témája">
+        <label>Leírás *</label><textarea id="jelLeiras" placeholder="Részletes jelentés..." style="min-height:120px"></textarea>
+        <label>Fotó / Melléklet</label>
+        <label class="file-label" for="jelKep">📷 Kép csatolása <input type="file" id="jelKep" accept="image/*" onchange="previewImg(this,'jelPreview')"></label>
+        <img id="jelPreview" class="img-preview">
+        <button class="btn btn-primary" onclick="postJelentes()">📊 Jelentés beküldése</button>
+        <div class="msg" id="jelMsg"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- NO ACCESS -->
+<div class="no-access" id="noAccess" style="display:none">
+  <h2>⛔ Nincs hozzáférésed</h2>
+  <p style="color:#8fa4bc">Ez az oldal csak regisztrált dolgozók számára elérhető.</p>
+  <a href="/mk-mernokseg/" style="color:#ef7a14">Vissza a főoldalra</a>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────
+const WORKER = 'https://mk.gekox1111.workers.dev';
+const WH = {
+  bejelentesek: 'https://discord.com/api/webhooks/1506968205904838726/3G8wdNzRThxf9qAbIlOCE8M0JZzgo54qIy_anHiq8eMYrRCoySptozEGWRfiuXg8qbtH',
+  hirek:        'https://discord.com/api/webhooks/1506968697817006112/eS8hCgnz670DE3wSTd-wJUXZ8fWwJOOCa2BDqPoeuTTU-MzDr0VHWtqA1qQ9tZ1xzKoG',
+  palyazatok:   'https://discord.com/api/webhooks/1506968768692224011/IjerB1tlXS9eeT9E2fjUaylgB9cOEGQHM-j81qgGSUITlBP43jFFTPMChjt8RTG6Fr9A',
+  eredmenyek:   'https://discord.com/api/webhooks/1506968846907474001/oDeLw3acxxq5tMnZViV39uaEUG_5C9kQCvW_izpM2vyEA3UQkpQcdmdawB3fbcFaiceu',
+  feladatok:    'https://discord.com/api/webhooks/1506968910208045196/5E11xop9yTyfwMNjNFLxPD-YsffXg55frVJ58fRrKS8HOxH_Po6EGoBPh7t3-FwjXWxP',
+  jelentes:     'https://discord.com/api/webhooks/1506969044853588129/lmX9gaou-OkwEcN1OrV2Fo4rVnIlEJaQ8Sm8jydoqvjo_sfbeIuhZtQotfrrg2rp7b98',
+  projektek:    'https://discord.com/api/webhooks/1506969179994194070/7pDAUSoDJx8hw5weMvE8yhpRIuxR0C2rGDtpejWayo7suTCy8RXLEcdJwUDmY0vIURbP',
+  utasitasok:   'https://discord.com/api/webhooks/1506969292342558770/oQeVf_c81uhsJGOeAMO75fJaxrsyQgGx4zD5GYFV0tpO-u_LYgMyjRCWn9KvEqSNp4z0',
+  svJelentes:   'https://discord.com/api/webhooks/1506969412643717210/-ILvEaKX6heAf_EH8MuROOGv5UAOT4IK8uicIMejp3zgXFjRijDFq6fkCXKhxBuyStM9',
+  tankolas:     'https://discord.com/api/webhooks/1506969509984993341/c3AxQO_-jOfYA4YAVd_YC6GlpdMfyd-BsdsnRTkEhRgnbsQbylrvNKRY-oJCt9RpNiYa',
+  engedelyek:   'https://discord.com/api/webhooks/1506969646627033190/i93o2u7v_iUQIEUkDV-qSXS0WMgchlm6WQf75DhCcGGazJ64uBj97_XxNeMHOaVD8cOJ',
+  tarolo:       'https://discord.com/api/webhooks/1506969713736155271/eF728qX2e0yWBHYVHtZLbhG45VNK5yvZwRXmz4DWLY0pAVPY_8CF0uaKEjeY8b_bqHM1',
+  szabadsag:    'https://discord.com/api/webhooks/1506969803636736094/NbDYxNBP1Yjktl4ZQJA4aiWZJzgrAWkQrg8vhuA9IwvA3KTeoWgCP0m9cGZfAqkBMzQq',
+  felmondas:    'https://discord.com/api/webhooks/1506969892233023560/mBJso4pIm6x9awluCjmCwZURYsT-9FkEJOLLK4dC-tbE3FKzd9ScsXtLsmqxhlgUeT3o'
+};
+
+let token = localStorage.getItem('mk_token');
+let user = null;
+// LocalStorage keys for feed data
+const LS = {
+  bejelentesek: 'mk_feed_bej',
+  hirek: 'mk_feed_hir',
+  utasitasok: 'mk_feed_utas',
+  palyazatok: 'mk_feed_paly',
+  szolgalati: 'mk_feed_sv',
+  tankolas: 'mk_feed_tank',
+  tarolo: 'mk_feed_taro'
+};
+
+// ── HELPERS ──────────────────────────────────────────────────────────────
+function showMsg(id, type, html) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'msg ' + (type === 'ok' ? 'msg-ok' : type === 'loading' ? 'msg-loading' : 'msg-err');
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+function hideMsg(id) { const el = document.getElementById(id); if(el) el.style.display = 'none'; }
+function val(id) { return document.getElementById(id)?.value?.trim() || ''; }
+function now() { return new Date().toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' }); }
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function previewImg(input, previewId) {
+  const preview = document.getElementById(previewId);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+async function sendWebhook(url, payload) {
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch(e) { console.warn('Webhook hiba:', e); }
+}
+
+function buildEmbed(title, color, fields, footer) {
+  return {
+    embeds: [{
+      title,
+      color,
+      fields: fields.map(f => ({ name: f[0], value: String(f[1] || '—'), inline: f[2] || false })),
+      footer: { text: footer || `${user?.username || 'Ismeretlen'} • ${now()}` },
+      timestamp: new Date().toISOString()
+    }]
+  };
+}
+
+// ── PAGE NAVIGATION ──────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-' + name);
+  if (pg) pg.classList.add('active');
+  const nav = document.querySelector(`.nav-item[data-page="${name}"]`);
+  if (nav) nav.classList.add('active');
+  // Lazy load
+  if (name === 'bejelentesek') renderFeed('bejelentesekFeed', LS.bejelentesek);
+  if (name === 'hirek') renderFeed('hirekFeed', LS.hirek);
+  if (name === 'utasitasok') renderFeed('utasitasokFeed', LS.utasitasok);
+  if (name === 'palyazatok') renderPalyazatok();
+  if (name === 'szolgalati') renderNaplo('svList', LS.szolgalati);
+  if (name === 'tankolas') renderNaplo('tankList', LS.tankolas);
+  if (name === 'tarolo') renderNaplo('taroList', LS.tarolo);
+  if (name === 'projektek') loadProjektek();
+  if (name === 'feladatok') loadFeladatok();
+}
+
+// ── FEED RENDER ──────────────────────────────────────────────────────────
+function renderFeed(containerId, lsKey) {
+  const container = document.getElementById(containerId);
+  const items = JSON.parse(localStorage.getItem(lsKey) || '[]');
+  if (!items.length) { container.innerHTML = '<div style="color:#4a6580;font-size:13px">Még nincs bejegyzés.</div>'; return; }
+  container.innerHTML = [...items].reverse().map((item, i) => `
+    <div class="acc-header" onclick="toggleAcc('acc-${lsKey}-${i}')">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#dce8f5">${item.cim}</div>
+        <div style="font-size:12px;color:#4a6580">${item.datum} • ${item.szerzo || 'Ismeretlen'}</div>
+      </div>
+      <span style="color:#4a6580">▼</span>
+    </div>
+    <div class="acc-body" id="acc-${lsKey}-${i}">
+      <div style="font-size:13px;color:#8fa4bc;white-space:pre-wrap">${item.tartalom}</div>
+      ${(user?.isAdmin || user?.isSupervisor || item.userId === user?.id) ? `<div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn-sm btn-edit" onclick="editFeedItem('${lsKey}',${items.length-1-i})">✏️ Szerk.</button>
+        <button class="btn-sm btn-del" onclick="deleteFeedItem('${lsKey}',${items.length-1-i},this)">🗑️ Töröl</button>
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+function toggleAcc(id) {
+  const el = document.getElementById(id);
+  if(el) el.classList.toggle('open');
+}
+
+function deleteFeedItem(lsKey, idx, btn) {
+  if(!confirm('Biztosan törlöd?')) return;
+  const items = JSON.parse(localStorage.getItem(lsKey) || '[]');
+  items.splice(idx, 1);
+  localStorage.setItem(lsKey, JSON.stringify(items));
+  const map = {[LS.bejelentesek]:'bejelentesekFeed',[LS.hirek]:'hirekFeed',[LS.utasitasok]:'utasitasokFeed'};
+  const cid = map[lsKey];
+  if(cid) renderFeed(cid, lsKey);
+  else renderNaplo(btn?.closest('.panel')?.querySelector('[id]')?.id, lsKey);
+}
+
+function editFeedItem(lsKey, idx) {
+  const items = JSON.parse(localStorage.getItem(lsKey) || '[]');
+  const item = items[idx];
+  if(!item) return;
+  const newCim = prompt('Cím:', item.cim);
+  if(newCim === null) return;
+  const newTart = prompt('Tartalom:', item.tartalom);
+  if(newTart === null) return;
+  items[idx].cim = newCim;
+  items[idx].tartalom = newTart;
+  localStorage.setItem(lsKey, JSON.stringify(items));
+  const map = {[LS.bejelentesek]:'bejelentesekFeed',[LS.hirek]:'hirekFeed',[LS.utasitasok]:'utasitasokFeed'};
+  const cid = map[lsKey];
+  if(cid) renderFeed(cid, lsKey);
+}
+
+function saveFeedItem(lsKey, item) {
+  const items = JSON.parse(localStorage.getItem(lsKey) || '[]');
+  items.push(item);
+  localStorage.setItem(lsKey, JSON.stringify(items));
+}
+
+function renderNaplo(containerId, lsKey) {
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  const items = JSON.parse(localStorage.getItem(lsKey) || '[]');
+  if (!items.length) { container.innerHTML = '<div style="color:#4a6580;font-size:13px">Még nincs bejegyzés.</div>'; return; }
+  container.innerHTML = [...items].reverse().map((item, i) => `
+    <div class="acc-header" onclick="toggleAcc('naplo-${lsKey}-${i}')">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#dce8f5">${item.datum || item.cim} ${item.rendszam ? '• '+item.rendszam : ''}</div>
+        <div style="font-size:12px;color:#4a6580">${item.rogzitveKor || ''}</div>
+      </div><span style="color:#4a6580">▼</span>
+    </div>
+    <div class="acc-body" id="naplo-${lsKey}-${i}">
+      ${Object.entries(item).filter(([k])=>!['rogzitveKor','userId'].includes(k)).map(([k,v])=>`<div style="font-size:12px;margin-bottom:4px"><span style="color:#4a6580">${k}:</span> <span style="color:#dce8f5">${v}</span></div>`).join('')}
+    </div>
+  `).join('');
+}
+
+// ── POST BEJELENTÉS ──────────────────────────────────────────────────────
+async function postBejelentes() {
+  const cim = val('bejCim'), tartalom = val('bejTartalom');
+  if(!cim || !tartalom) { showMsg('bejMsg','err','❌ Minden mező kötelező!'); return; }
+  showMsg('bejMsg','loading','<span class="spinner"></span> Küldés...');
+  const item = { cim, tartalom, datum: now(), szerzo: user?.username, userId: user?.id };
+  saveFeedItem(LS.bejelentesek, item);
+  await sendWebhook(WH.bejelentesek, buildEmbed('📢 Új bejelentés: '+cim, 0xef7a14, [['Tartalom',tartalom],['Közzétette',user?.username]]));
+  document.getElementById('bejCim').value = '';
+  document.getElementById('bejTartalom').value = '';
+  showMsg('bejMsg','ok','✅ Bejelentés közzétéve!');
+  renderFeed('bejelentesekFeed', LS.bejelentesek);
+}
+
+// ── POST HÍR ─────────────────────────────────────────────────────────────
+async function postHir() {
+  const cim = val('hirCim'), tartalom = val('hirTartalom');
+  if(!cim || !tartalom) { showMsg('hirMsg','err','❌ Minden mező kötelező!'); return; }
+  showMsg('hirMsg','loading','<span class="spinner"></span> Küldés...');
+  const item = { cim, tartalom, datum: now(), szerzo: user?.username, userId: user?.id };
+  saveFeedItem(LS.hirek, item);
+  await sendWebhook(WH.hirek, buildEmbed('📰 Új hír: '+cim, 0x3b82f6, [['Tartalom',tartalom],['Közzétette',user?.username]]));
+  document.getElementById('hirCim').value = '';
+  document.getElementById('hirTartalom').value = '';
+  showMsg('hirMsg','ok','✅ Hír közzétéve!');
+  renderFeed('hirekFeed', LS.hirek);
+}
+
+// ── POST UTASÍTÁS ─────────────────────────────────────────────────────────
+async function postUtasitas() {
+  const cim = val('utasCim'), tartalom = val('utasTartalom');
+  if(!cim || !tartalom) { showMsg('utasMsg','err','❌ Minden mező kötelező!'); return; }
+  showMsg('utasMsg','loading','<span class="spinner"></span> Küldés...');
+  const item = { cim, tartalom, datum: now(), szerzo: user?.username, userId: user?.id };
+  saveFeedItem(LS.utasitasok, item);
+  await sendWebhook(WH.utasitasok, buildEmbed('📋 Új utasítás: '+cim, 0x8b5cf6, [['Tartalom',tartalom],['Kiadta',user?.username]]));
+  document.getElementById('utasCim').value = '';
+  document.getElementById('utasTartalom').value = '';
+  showMsg('utasMsg','ok','✅ Utasítás közzétéve!');
+  renderFeed('utasitasokFeed', LS.utasitasok);
+}
+
+// ── POST SZOLGÁLATI ───────────────────────────────────────────────────────
+async function postSzolgalati() {
+  const datum = val('svDate'), tev = val('svTevekenyseg'), megj = val('svMegjegyzes');
+  if(!datum || !tev) { showMsg('svMsg','err','❌ Dátum és tevékenység kötelező!'); return; }
+  showMsg('svMsg','loading','<span class="spinner"></span> Rögzítés...');
+  const item = { datum, tevékenység: tev, megjegyzés: megj, rogzitveKor: now(), userId: user?.id };
+  saveFeedItem(LS.szolgalati, item);
+  await sendWebhook(WH.svJelentes, buildEmbed('📓 Szolgálati napló', 0x22c55e, [['Dolgozó',user?.username],['Dátum',datum],['Tevékenység',tev],['Megjegyzés',megj||'—']]));
+  document.getElementById('svDate').value = '';
+  document.getElementById('svTevekenyseg').value = '';
+  document.getElementById('svMegjegyzes').value = '';
+  showMsg('svMsg','ok','✅ Bejegyzés rögzítve!');
+  renderNaplo('svList', LS.szolgalati);
+}
+
+// ── POST TANKOLÁS ─────────────────────────────────────────────────────────
+async function postTankolas() {
+  const datum=val('tankDatum'),rsz=val('tankRendszam'),liter=val('tankLiter'),osszeg=val('tankOsszeg'),allomas=val('tankAllomas'),megj=val('tankMegjegyzes');
+  if(!datum||!rsz||!liter||!osszeg){showMsg('tankMsg','err','❌ Kötelező mezők hiányoznak!');return;}
+  showMsg('tankMsg','loading','<span class="spinner"></span> Rögzítés...');
+  const item={datum,rendszam:rsz,liter,összeg:osszeg+'Ft',töltőállomás:allomas||'—',megjegyzés:megj||'—',rogzitveKor:now(),userId:user?.id};
+  saveFeedItem(LS.tankolas,item);
+  await sendWebhook(WH.tankolas,buildEmbed('⛽ Tankolás bejegyzés',0xf59e0b,[['Dolgozó',user?.username],['Dátum',datum],['Rendszám',rsz],['Liter',liter+' L'],['Összeg',osszeg+' Ft'],['Állomás',allomas||'—'],['Megjegyzés',megj||'—']]));
+  ['tankDatum','tankRendszam','tankLiter','tankOsszeg','tankAllomas','tankMegjegyzes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tankPreview').style.display='none';
+  showMsg('tankMsg','ok','✅ Tankolás rögzítve!');
+  renderNaplo('tankList',LS.tankolas);
+}
+
+// ── POST TÁROLÓ ───────────────────────────────────────────────────────────
+async function postTarolo() {
+  const datum=val('taroDatum'),azon=val('taroAzon'),muv=val('taroMuvelet'),leiras=val('taroLeiras');
+  if(!datum||!leiras){showMsg('taroMsg','err','❌ Dátum és leírás kötelező!');return;}
+  showMsg('taroMsg','loading','<span class="spinner"></span> Rögzítés...');
+  const item={datum,azonosító:azon||'—',művelet:muv,leírás:leiras,rogzitveKor:now(),userId:user?.id};
+  saveFeedItem(LS.tarolo,item);
+  await sendWebhook(WH.tarolo,buildEmbed('🏪 Tároló napló',0x06b6d4,[['Dolgozó',user?.username],['Dátum',datum],['Tároló',azon||'—'],['Művelet',muv],['Leírás',leiras]]));
+  ['taroDatum','taroAzon','taroLeiras'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('taroPreview').style.display='none';
+  showMsg('taroMsg','ok','✅ Tároló bejegyzés rögzítve!');
+  renderNaplo('taroList',LS.tarolo);
+}
+
+// ── POST SZABADSÁG ────────────────────────────────────────────────────────
+async function postSzabadsag() {
+  const kezd=val('szabKezd'),veg=val('szabVeg'),tipus=val('szabTipus'),indok=val('szabIndok');
+  if(!kezd||!veg){showMsg('szabMsg','err','❌ Dátumok kötelezők!');return;}
+  if(new Date(veg)<new Date(kezd)){showMsg('szabMsg','err','❌ Záró dátum nem lehet korábbi!');return;}
+  showMsg('szabMsg','loading','<span class="spinner"></span> Kérelem küldése...');
+  await sendWebhook(WH.szabadsag,buildEmbed('🏖️ Szabadság kérelem',0x10b981,[['Dolgozó',user?.username],['Típus',tipus],['Kezdés',kezd],['Vége',veg],['Indoklás',indok||'—']]));
+  await sendWebhook(WH.engedelyek,buildEmbed('🏖️ Engedélykérés – Szabadság',0x10b981,[['Dolgozó',user?.username],['Típus',tipus],['Időszak',kezd+' – '+veg],['Indoklás',indok||'—']]));
+  ['szabKezd','szabVeg','szabIndok'].forEach(id=>document.getElementById(id).value='');
+  showMsg('szabMsg','ok','✅ Szabadság kérelem beküldve! A felettesed hamarosan válaszol.');
+}
+
+// ── POST FELMONDÁS ────────────────────────────────────────────────────────
+async function postFelmondas() {
+  const datum=val('felmDatum'),indok=val('felmIndok');
+  if(!datum||!indok){showMsg('felmMsg','err','❌ Minden mező kötelező!');return;}
+  if(!confirm('⚠️ Biztosan be szeretnéd küldeni a felmondásodat? Ez visszavonhatatlan!')){return;}
+  showMsg('felmMsg','loading','<span class="spinner"></span> Küldés...');
+  await sendWebhook(WH.felmondas,{embeds:[{title:'📤 FELMONDÁSI NYILATKOZAT',color:0xdc2626,fields:[{name:'Dolgozó',value:user?.username||'—'},{name:'Utolsó munkanap',value:datum},{name:'Indoklás',value:indok}],footer:{text:'Küldve: '+now()},timestamp:new Date().toISOString()}]});
+  document.getElementById('felmDatum').value='';
+  document.getElementById('felmIndok').value='';
+  showMsg('felmMsg','ok','✅ Felmondás beküldve. Hamarosan felvesszük veled a kapcsolatot.');
+}
+
+// ── POST PÁLYÁZAT ─────────────────────────────────────────────────────────
+async function postPalyazat() {
+  const cim=val('palyCim'),leiras=val('palyLeiras'),kat=val('palyKategoria');
+  if(!cim||!leiras){showMsg('palyMsg','err','❌ Cím és leírás kötelező!');return;}
+  showMsg('palyMsg','loading','<span class="spinner"></span> Beküldés...');
+  const item={cim,leiras,kategoria:kat,allapot:'⏳ Folyamatban',datum:now(),szerzo:user?.username,userId:user?.id};
+  saveFeedItem(LS.palyazatok,item);
+  await sendWebhook(WH.palyazatok,buildEmbed('💡 Új pályázat/ötlet: '+cim,0x8b5cf6,[['Kategória',kat],['Leírás',leiras],['Beküldő',user?.username]]));
+  document.getElementById('palyCim').value='';
+  document.getElementById('palyLeiras').value='';
+  showMsg('palyMsg','ok','✅ Pályázat beküldve!');
+  renderPalyazatok();
+}
+
+function renderPalyazatok() {
+  const container=document.getElementById('palyazatokList');
+  const items=JSON.parse(localStorage.getItem(LS.palyazatok)||'[]');
+  if(!items.length){container.innerHTML='<div style="color:#4a6580;font-size:13px">Még nincs pályázat.</div>';return;}
+  container.innerHTML=[...items].reverse().map((item,i)=>{
+    const canEdit=user?.isAdmin||user?.isSupervisor||item.userId===user?.id;
+    const ridx=items.length-1-i;
+    const allapotBadge=item.allapot.includes('Elfogad')?'badge-ok':item.allapot.includes('Elutasít')?'badge-err':'badge-warn';
+    return`<div class="acc-header" onclick="toggleAcc('paly-${i}')">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#dce8f5">${item.cim} <span class="badge ${allapotBadge}">${item.allapot}</span></div>
+        <div style="font-size:12px;color:#4a6580">${item.datum} • ${item.szerzo} • ${item.kategoria}</div>
+      </div><span style="color:#4a6580">▼</span></div>
+    <div class="acc-body" id="paly-${i}">
+      <div style="font-size:13px;color:#8fa4bc;white-space:pre-wrap">${item.leiras}</div>
+      ${item.eredmenyIndok?`<div style="margin-top:8px;padding:10px;background:#1a2c42;border-radius:8px;font-size:12px"><b>Indoklás:</b> ${item.eredmenyIndok}</div>`:''}
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        ${canEdit&&!item.allapot.includes('Elfogad')&&!item.allapot.includes('Elutasít')?`<button class="btn-sm btn-edit" onclick="editPalyazat(${ridx})">✏️ Szerk.</button>`:''}
+        ${(user?.isAdmin||user?.isSupervisor)?`
+          <button class="btn-sm" style="background:#0d2b1e;color:#86efac" onclick="eredmenyPalyazat(${ridx},'elfogad')">✅ Elfogad</button>
+          <button class="btn-sm btn-del" onclick="eredmenyPalyazat(${ridx},'elutasit')">❌ Elutasít</button>`:''}
+        ${user?.isAdmin?`<button class="btn-sm btn-del" onclick="deletePaly(${ridx})">🗑️ Töröl</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function editPalyazat(idx){
+  const items=JSON.parse(localStorage.getItem(LS.palyazatok)||'[]');
+  const item=items[idx];if(!item)return;
+  const newCim=prompt('Cím:',item.cim);if(newCim===null)return;
+  const newLeiras=prompt('Leírás:',item.leiras);if(newLeiras===null)return;
+  items[idx].cim=newCim;items[idx].leiras=newLeiras;
+  localStorage.setItem(LS.palyazatok,JSON.stringify(items));
+  renderPalyazatok();
+}
+
+async function eredmenyPalyazat(idx,tipus){
+  const items=JSON.parse(localStorage.getItem(LS.palyazatok)||'[]');
+  const item=items[idx];if(!item)return;
+  const indok=prompt(`Indoklás (${tipus==='elfogad'?'elfogadás':'elutasítás'}):`)??'';
+  items[idx].allapot=tipus==='elfogad'?'✅ Elfogadva':'❌ Elutasítva';
+  items[idx].eredmenyIndok=indok;
+  localStorage.setItem(LS.palyazatok,JSON.stringify(items));
+  await sendWebhook(WH.eredmenyek,buildEmbed(`${tipus==='elfogad'?'✅':'❌'} Pályázat eredménye: ${item.cim}`,tipus==='elfogad'?0x22c55e:0xdc2626,[['Beküldő',item.szerzo],['Döntés',items[idx].allapot],['Indoklás',indok||'—'],['Döntéshozó',user?.username]]));
+  renderPalyazatok();
+}
+
+function deletePaly(idx){
+  if(!confirm('Biztosan törlöd?'))return;
+  const items=JSON.parse(localStorage.getItem(LS.palyazatok)||'[]');
+  items.splice(idx,1);
+  localStorage.setItem(LS.palyazatok,JSON.stringify(items));
+  renderPalyazatok();
+}
+
+// ── POST JELENTÉS ─────────────────────────────────────────────────────────
+async function postJelentes() {
+  const cim=val('jelCim'),leiras=val('jelLeiras');
+  if(!cim||!leiras){showMsg('jelMsg','err','❌ Cím és leírás kötelező!');return;}
+  showMsg('jelMsg','loading','<span class="spinner"></span> Küldés...');
+  await sendWebhook(WH.jelentes,buildEmbed('📊 Új jelentés: '+cim,0x6366f1,[['Dolgozó',user?.username],['Leírás',leiras]]));
+  document.getElementById('jelCim').value='';
+  document.getElementById('jelLeiras').value='';
+  document.getElementById('jelPreview').style.display='none';
+  showMsg('jelMsg','ok','✅ Jelentés beküldve!');
+}
+
+// ── PROJEKTEK (placeholder – Worker API-ból) ──────────────────────────────
+async function loadProjektek(){
+  const container=document.getElementById('projektekList');
+  container.innerHTML='<div style="color:#4a6580;font-size:13px"><span class="spinner"></span> Betöltés...</div>';
+  try{
+    const res=await fetch(WORKER+'/projektek',{headers:{Authorization:'Bearer '+token}});
+    if(!res.ok){container.innerHTML='<div style="color:#4a6580;font-size:13px">Nincsenek elérhető projektek.</div>';return;}
+    const data=await res.json();
+    if(!data.length){container.innerHTML='<div style="color:#4a6580;font-size:13px">Nincsenek elérhető projektek.</div>';return;}
+    container.innerHTML=data.map(p=>`
+      <div class="feed-item">
+        <div class="feed-title">${p.name||p.title}</div>
+        <div class="feed-meta">${p.description||''}</div>
+        ${p.joined?`<span class="badge badge-ok" style="margin-top:6px;display:inline-block">✅ Feljelentkezve</span>`:
+          `<button class="btn-sm btn-edit" style="margin-top:8px" onclick="feljelentkezik('${p.id}',this)">➕ Feljelentkezés</button>`}
+      </div>
+    `).join('');
+  }catch(e){container.innerHTML='<div style="color:#4a6580;font-size:13px">Projektek nem elérhetők.</div>';}
+}
+
+async function feljelentkezik(projectId,btn){
+  btn.disabled=true;btn.textContent='...';
+  try{
+    const res=await fetch(WORKER+'/projektek/join',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({project_id:projectId})});
+    if(res.ok){btn.outerHTML='<span class="badge badge-ok" style="margin-top:6px;display:inline-block">✅ Feljelentkezve</span>';
+    await sendWebhook(WH.projektek,buildEmbed('📁 Projekthez csatlakozás',0xef7a14,[['Dolgozó',user?.username],['Projekt ID',projectId]]));}
+    else{btn.disabled=false;btn.textContent='➕ Feljelentkezés';}
+  }catch(e){btn.disabled=false;btn.textContent='➕ Feljelentkezés';}
+}
+
+async function loadFeladatok(){
+  const container=document.getElementById('feladatokList');
+  container.innerHTML='<div style="color:#4a6580;font-size:13px"><span class="spinner"></span> Betöltés...</div>';
+  try{
+    const res=await fetch(WORKER+'/feladatok/me',{headers:{Authorization:'Bearer '+token}});
+    if(!res.ok){container.innerHTML='<div style="color:#4a6580;font-size:13px">Nincsenek feladatok.</div>';return;}
+    const data=await res.json();
+    if(!data.length){container.innerHTML='<div style="color:#4a6580;font-size:13px">Nincsenek hozzád rendelt feladatok.</div>';return;}
+    container.innerHTML=data.map(f=>`
+      <div class="feed-item">
+        <div class="feed-title">${f.title||f.name}</div>
+        <div class="feed-meta">${f.description||''} ${f.deadline?'• Határidő: '+f.deadline:''}</div>
+        <span class="badge ${f.done?'badge-ok':'badge-warn'}" style="margin-top:6px;display:inline-block">${f.done?'✅ Kész':'⏳ Folyamatban'}</span>
+      </div>
+    `).join('');
+  }catch(e){container.innerHTML='<div style="color:#4a6580;font-size:13px">Feladatok nem elérhetők.</div>';}
+}
+
+// ── RECENT ACTIVITY ───────────────────────────────────────────────────────
+function loadRecentActivity(){
+  const items=[];
+  Object.entries(LS).forEach(([k,lsKey])=>{
+    const data=JSON.parse(localStorage.getItem(lsKey)||'[]');
+    data.forEach(item=>{if(item.userId===user?.id)items.push({...item,_type:k});});
+  });
+  items.sort((a,b)=>b.rogzitveKor?.localeCompare(a.rogzitveKor||''));
+  const container=document.getElementById('recentActivity');
+  if(!items.length){container.innerHTML='<div style="color:#4a6580">Még nincs tevékenység.</div>';return;}
+  const icons={bejelentesek:'📢',hirek:'📰',utasitasok:'📋',palyazatok:'💡',szolgalati:'📓',tankolas:'⛽',tarolo:'🏪'};
+  container.innerHTML=items.slice(0,8).map(item=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a2c42">
+      <span style="font-size:18px">${icons[item._type]||'📝'}</span>
+      <div><div style="font-size:13px;color:#dce8f5">${item.cim||item.datum}</div><div style="font-size:11px;color:#4a6580">${item.rogzitveKor||''}</div></div>
+    </div>
+  `).join('');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+async function init(){
+  if(!token){
+    document.getElementById('noAccess').style.display='flex';
+    document.querySelector('.layout').style.display='none';
+    document.querySelector('header').style.display='none';
+    return;
+  }
+  try{
+    const res=await fetch(WORKER+'/me',{headers:{Authorization:'Bearer '+token}});
+    if(!res.ok){throw new Error('Unauthorized');}
+    user=await res.json();
+  }catch(e){
+    document.getElementById('noAccess').style.display='flex';
+    document.querySelector('.layout').style.display='none';
+    return;
+  }
+
+  // Jogosultság: admin, supervisor, vagy worker
+  if(!user.isAdmin && !user.isSupervisor && !user.isWorker){
+    document.getElementById('noAccess').style.display='flex';
+    document.querySelector('.layout').style.display='none';
+    return;
+  }
+
+  // Supervisor/Admin post panelek megjelenítése
+  if(user.isAdmin || user.isSupervisor){
+    document.getElementById('bejelentesPost').style.display='block';
+    document.getElementById('hirPost').style.display='block';
+    document.getElementById('utasitasPost').style.display='block';
+  }
+
+  document.getElementById('userName').textContent = (user.isAdmin?'🔒 Admin':user.isSupervisor?'👤 Supervisor':'👷 Dolgozó')+': '+user.username;
+  document.getElementById('dashName').textContent = user.username || '';
+
+  // Set today's date defaults
+  const d=today();
+  ['svDate','tankDatum','taroDatum'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=d;});
+
+  renderFeed('bejelentesekFeed', LS.bejelentesek);
+  loadRecentActivity();
+}
+
+function logout(){localStorage.removeItem('mk_token');window.location.href='/mk-mernokseg/';}
+
+init();
+</script>
+</body>
+</html>
