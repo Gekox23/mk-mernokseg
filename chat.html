@@ -114,6 +114,9 @@
 </div>
 <script>
 const WORKER_URL='https://mk.gekox1111.workers.dev';
+const DISCORD_CLIENT_ID='1506719802390085778';
+const REDIRECT_URI=encodeURIComponent('https://gekox23.github.io/mk-mernokseg/callback.html');
+const DISCORD_OAUTH_URL=`https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=email+identify`;
 let currentUser=null,activeTicketId=null,ticketPollInterval=null,aiDone=false;
 function getToken(){return localStorage.getItem('mk_token');}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -166,13 +169,16 @@ function showSatisfaction(){
 function satYes(){document.querySelector('.sat-box').remove();addAiMsg('bot','🎉 Örülök, hogy segíthettem! Ha még kérdésed van, bármikor írj.');aiDone=false;showChips(QUICK_CHIPS);}
 async function satNo(){
   document.querySelector('.sat-box').remove();
-  if(!currentUser){addAiMsg('bot','⚠️ Ticket nyitásához kérjük <a href="/mk-mernokseg/" style="color:#ef7a14">lépj be Discord fiókoddal</a>, majd gyere vissza.');return;}
+  if(!currentUser){
+    addAiMsg('bot','⚠️ Ticket nyitásához kérjük <a href="'+DISCORD_OAUTH_URL+'" style="color:#ef7a14">lépj be Discord fiókoddal</a>, majd gyere vissza.');
+    return;
+  }
   const lastUserMsg=[...document.querySelectorAll('.ai-msg.user')].pop()?.innerText||'Segítség kérés';
   addAiMsg('bot','⏳ Ticket létrehozása...');
   try{const res=await fetch(WORKER_URL+'/ticket/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({subject:lastUserMsg.slice(0,100),first_message:lastUserMsg})});const data=await res.json();if(data.ok){addAiMsg('bot','🎫 Ticketedet megnyitottuk! Egy supervisor hamarosan átveszi.<br><br><button onclick="switchTab(\'tickets\');openTicketById(\''+data.id+'\')" style="background:#ef7a14;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700">🎫 Ticket megtekintése</button>');}}catch(e){addAiMsg('bot','⚠️ Nem sikerült ticket létrehozása. Próbáld a Ticketek fülön.');}
   aiDone=false;
 }
-function setupTickets(){const row=document.getElementById('newTicketRow');if(!currentUser){row.innerHTML=`<div class="login-notice" style="padding:10px 0">Tickethez <a href="/mk-mernokseg/">lépj be Discord fiókoddal</a>.</div>`;return;}if(!currentUser.isAdmin&&!currentUser.isSupervisor){row.innerHTML=`<button onclick="openNewTicket()" style="background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">+ Új ticket nyitása</button>`;}}
+function setupTickets(){const row=document.getElementById('newTicketRow');if(!currentUser){row.innerHTML=`<div class="login-notice" style="padding:10px 0">Tickethez <a href="${DISCORD_OAUTH_URL}">lépj be Discord fiókoddal</a>.</div>`;return;}if(!currentUser.isAdmin&&!currentUser.isSupervisor){row.innerHTML=`<button onclick="openNewTicket()" style="background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">+ Új ticket nyitása</button>`;}}
 async function refreshTickets(){
   if(!currentUser){document.getElementById('ticketListEl').innerHTML='<div class="empty-note">Bejelentkezés szükséges.</div>';return;}
   try{const res=await fetch(WORKER_URL+'/ticket/list',{headers:{Authorization:'Bearer '+getToken()}});const tickets=await res.json();const el=document.getElementById('ticketListEl');
