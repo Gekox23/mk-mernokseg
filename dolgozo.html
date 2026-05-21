@@ -975,7 +975,7 @@ async function createProjekt() {
         });
       } catch(e) { console.warn('Kép hiba:', e); }
     } else {
-      await sendWebhook(WH.projektek, buildEmbed('📁 Új projekt létrehozva: '+nev, 0xef7a14, [
+      await sendWebhook(WH.svJelentes, buildEmbed('📁 Új projekt létrehozva: '+nev, 0xef7a14, [
         ['Létrehozta', user?.username],
         ['Leírás',     leiras],
         ['Határidő',   hatarido || '—']
@@ -1211,7 +1211,10 @@ async function acceptJoin(requestId, projectId, btn) {
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
     body: JSON.stringify({ request_id: requestId })
   });
-  if(res.ok) togglePending(projectId);
+  if(res.ok) {
+    togglePending(projectId);   // kérelmek lista frissül
+    loadProjektek();             // projekt kártyák frissülnek (joined/pending állapot)
+  }
 }
 
 async function rejectJoin(requestId, projectId, btn) {
@@ -1221,7 +1224,10 @@ async function rejectJoin(requestId, projectId, btn) {
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
     body: JSON.stringify({ request_id: requestId })
   });
-  if(res.ok) togglePending(projectId);
+  if(res.ok) {
+    togglePending(projectId);
+    loadProjektek();
+  }
 }
 
 // ── RECENT ACTIVITY ───────────────────────────────────────────────────────
