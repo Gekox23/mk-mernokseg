@@ -791,12 +791,6 @@ async function postSzabadsag() {
     ['Vége',    veg],
     ['Indoklás',indok || '—']
   ]));
-  await sendWebhook(WH.engedelyek, buildEmbed('🏖️ Engedélykérés – Szabadság', 0x10b981, [
-    ['Dolgozó',  user?.username],
-    ['Típus',    tipus],
-    ['Időszak',  kezd + ' – ' + veg],
-    ['Indoklás', indok || '—']
-  ]));
   ['szabKezd','szabVeg','szabIndok'].forEach(id => document.getElementById(id).value = '');
   showMsg('szabMsg','ok','✅ Szabadság kérelem beküldve! A felettesed hamarosan válaszol.');
 }
