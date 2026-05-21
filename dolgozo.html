@@ -1188,14 +1188,18 @@ async function togglePending(projectId) {
       box.innerHTML = '<div style="font-size:12px;color:#4a6580">Nincs függőben lévő kérelem.</div>';
       return;
     }
+
+    // Projekt neve a kártyából
+    const projTitle = document.querySelector(`#proj-${projectId} .proj-title`)?.textContent || projectId;
+
     box.innerHTML = `
       <div style="font-size:13px;font-weight:700;color:#dce8f5;margin-bottom:8px">📋 Csatlakozási kérelmek</div>
       ${data.map(r => `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a2c42">
-          <span style="font-size:13px;color:#dce8f5">👷 ${r.username}</span>
+          <span style="font-size:13px;color:#dce8f5" data-rid="${r.id}">👷 ${r.username}</span>
           <div style="display:flex;gap:6px">
-            <button class="btn-sm btn-green" onclick="acceptJoin(${r.id},'${projectId}',this)">✅ Elfogad</button>
-            <button class="btn-sm btn-del"   onclick="rejectJoin(${r.id},'${projectId}',this)">❌ Elutasít</button>
+            <button class="btn-sm btn-green" onclick="acceptJoin(${r.id},'${projectId}','${r.username}','${projTitle.replace(/'/g,"\\'")}',this)">✅ Elfogad</button>
+            <button class="btn-sm btn-del" onclick="rejectJoin(${r.id},'${projectId}','${r.username}','${projTitle.replace(/'/g,"\\'")}',this)">❌ Elutasít</button>
           </div>
         </div>
       `).join('')}`;
@@ -1203,8 +1207,7 @@ async function togglePending(projectId) {
     box.innerHTML = '<div style="font-size:12px;color:#f87171">Hiba a kérelmek betöltésekor.</div>';
   }
 }
-
-async function acceptJoin(requestId, projectId, btn) {
+async function acceptJoin(requestId, projectId, username, projectName, btn) {
   btn.disabled = true;
   const res = await fetch(WORKER + '/projektek/join/accept', {
     method: 'POST',
@@ -1212,12 +1215,20 @@ async function acceptJoin(requestId, projectId, btn) {
     body: JSON.stringify({ request_id: requestId })
   });
   if(res.ok) {
-    togglePending(projectId);   // kérelmek lista frissül
-    loadProjektek();             // projekt kártyák frissülnek (joined/pending állapot)
+    await sendWebhook(
+      'https://discord.com/api/webhooks/1506969412643717210/-ILvEaKX6heAf_EH8MuROOGv5UAOT4IK8uicIMejp3zgXFjRijDFq6fkCXKhxBuyStM9',
+      buildEmbed('✅ Projekt csatlakozás elfogadva', 0x22c55e, [
+        ['Dolgozó',   username],
+        ['Projekt',   projectName],
+        ['Elfogadta', user?.username],
+        ['Státusz',   '✅ Elfogadva']
+      ])
+    );
+    togglePending(projectId);
+    loadProjektek();
   }
 }
-
-async function rejectJoin(requestId, projectId, btn) {
+async function rejectJoin(requestId, projectId, username, projectName, btn) {
   btn.disabled = true;
   const res = await fetch(WORKER + '/projektek/join/reject', {
     method: 'POST',
@@ -1225,11 +1236,19 @@ async function rejectJoin(requestId, projectId, btn) {
     body: JSON.stringify({ request_id: requestId })
   });
   if(res.ok) {
+    await sendWebhook(
+      'https://discord.com/api/webhooks/1506969412643717210/-ILvEaKX6heAf_EH8MuROOGv5UAOT4IK8uicIMejp3zgXFjRijDFq6fkCXKhxBuyStM9',
+      buildEmbed('❌ Projekt csatlakozás elutasítva', 0xdc2626, [
+        ['Dolgozó',    username],
+        ['Projekt',    projectName],
+        ['Elutasítta', user?.username],
+        ['Státusz',    '❌ Elutasítva']
+      ])
+    );
     togglePending(projectId);
     loadProjektek();
   }
 }
-
 // ── RECENT ACTIVITY ───────────────────────────────────────────────────────
 function loadRecentActivity() {
   const items = [];
