@@ -660,12 +660,12 @@ async function postSzolgalati() {
     userId: user?.id
   };
   saveFeedItem(LS.szolgalati, item);
-  await sendWebhook(WH.svJelentes, buildEmbed('📓 Szolgálati napló', 0x22c55e, [
-    ['Dolgozó',     user?.username],
-    ['Kezdete',     kezdete.replace('T',' ')],
-    ['Vége',        vege.replace('T',' ')],
-    ['Tevékenység', tev],
-    ['Megjegyzés',  megj || '—']
+  await sendWebhook(WH.szolgalati, buildEmbed('📓 Szolgálati napló', 0x22c55e, [
+  ['Dolgozó',     user?.username],
+  ['Kezdete',     kezdete.replace('T',' ')],
+  ['Vége',        vege.replace('T',' ')],
+  ['Tevékenység', tev],
+  ['Megjegyzés',  megj || '—']
   ]));
   document.getElementById('svKezdete').value = '';
   document.getElementById('svVege').value = '';
