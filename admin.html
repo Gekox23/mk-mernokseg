@@ -57,9 +57,10 @@
 <body>
 <header>
   <div class="brand">MK <span id="panelBrandTitle">Admin Panel</span></div>
-  <div style="display:flex;align-items:center;gap:12px">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <span id="adminName" style="font-size:13px;color:#8fa4bc"></span>
-    <a href="/mk-mernokseg/" style="background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;font-size:13px">← Főoldal</a>
+    <a href="/mk-mernokseg/dolgozo" style="background:#0d2b1e;border:1px solid #166534;color:#86efac;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">👷 Dolgozói Panel</a>
+    <a href="/mk-mernokseg/" style="background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;font-size:13px;text-decoration:none">← Főoldal</a>
     <button style="background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px" onclick="logout()">Kilépés</button>
   </div>
 </header>
@@ -116,7 +117,7 @@
 
   <!-- FELHASZNÁLÓK - admin és supervisor látja -->
   <div class="panel" id="usersPanel" style="display:none">
-    <h3>👥 Felhasználók & Szerepkör kezelés</h3>
+    <h3>👥 Felhasználók &amp; Szerepkör kezelés</h3>
     <div class="legend">
       <span class="legend-item"><span class="badge badge-admin">🔒 Admin</span> Teljes hozzáférés</span>
       <span class="legend-item"><span class="badge badge-sv">👤 Supervisor</span> Csak admin jelölheti ki</span>
@@ -184,7 +185,7 @@
     loadEvents();
   }
 
-  // ── ESEMÉNY LÉTREHOZÁS ──────────────────────────────────────────
+  // ── ESEMÉNY LÉTREHOZÁS ────────────────────────────────
   async function handleCreateEvent(){
     const btn=document.getElementById('createBtn');hideMsg('createMsg');
     const title=document.getElementById('evTitle').value.trim(),
@@ -263,7 +264,7 @@
     }catch(e){document.getElementById('eventsTable').innerHTML='<tr><td colspan="5" style="color:#f87171">Betöltési hiba</td></tr>';}
   }
 
-  // ── FELHASZNÁLÓK BETÖLTÉSE ───────────────────────────────────────────
+  // ── FELHASZNÁLÓK BETÖLTÉSE ────────────────────────────────────
   async function loadUsers(){
     try{
       const res=await fetch(WORKER+'/admin/users',{headers:{Authorization:'Bearer '+token}});
@@ -272,23 +273,19 @@
       const tbody=document.getElementById('usersTable');
       if(!users.length){tbody.innerHTML='<tr><td colspan="5" style="color:#4a6580">Nincs felhasználó</td></tr>';return;}
       tbody.innerHTML=users.map(u=>{
-        // Szerepkör badge
         let roleBadge;
         if(u.is_admin) roleBadge='<span class="badge badge-admin">🔒 Admin</span>';
         else if(u.is_supervisor) roleBadge='<span class="badge badge-sv">👤 Supervisor</span>';
         else if(u.is_worker) roleBadge='<span class="badge badge-worker">👷 Dolgozó</span>';
         else roleBadge='<span class="badge badge-user">👤 Felhasználó</span>';
 
-        // Műveletek oszlop - jogosultságfüggő
         let actions = '';
         if(!u.is_admin){
-          // CSAK ADMIN tud supervisort kijelölni/elvonni
           if(user.isAdmin){
             actions += `<button class="btn-sv" onclick="setSupervisor('${u.id}',${!u.is_supervisor})">
               ${u.is_supervisor ? '❌ SV elvesz' : '⭐ Supervisor'}
             </button>`;
           }
-          // ADMIN ÉS SUPERVISOR tud dolgozót kijelölni/elvonni (de nem supervisort!
           if(!u.is_supervisor){
             actions += `<button class="btn-worker" onclick="setWorker('${u.id}',${!u.is_worker})">
               ${u.is_worker ? '❌ Dolgozó elvesz' : '👷 Dolgozó kijelöl'}
@@ -308,7 +305,6 @@
     }catch(e){}
   }
 
-  // Supervisor kijelölés - CSAK ADMIN
   async function setSupervisor(userId,value){
     if(!user.isAdmin){alert('⛔ Csak admin jelölhet ki supervisort!');return;}
     const res=await fetch(WORKER+'/admin/set-supervisor',{
@@ -320,7 +316,6 @@
     else alert('Hiba!');
   }
 
-  // Dolgozó kijelölés - ADMIN ÉS SUPERVISOR
   async function setWorker(userId,value){
     const res=await fetch(WORKER+'/admin/set-worker',{
       method:'POST',
@@ -328,7 +323,7 @@
       body:JSON.stringify({user_id:userId,value})
     });
     if(res.ok)loadUsers();
-    else alert('Hiba! (A Worker API-ban a /admin/set-worker endpoint szükséges)');
+    else alert('Hiba!');
   }
 
   function logout(){localStorage.removeItem('mk_token');window.location.href='/mk-mernokseg/';}
