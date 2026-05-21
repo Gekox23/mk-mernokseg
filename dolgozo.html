@@ -753,18 +753,7 @@ async function postTarolo() {
         body: form
       });
     } catch(e) { console.warn('Kép feltöltés hiba:', e); }
-  }
-
-  const item = {
-    datum,
-    'azonosító': azon || '—',
-    'művelet': muv,
-    'leírás': leiras,
-    rogzitveKor: now(), userId: user?.id
-  };
-  saveFeedItem(LS.tarolo, item);
-
-  if(!kepFile) {
+  } else {
     await sendWebhook(WH.tarolo, buildEmbed('🏪 Tároló napló', 0x06b6d4, [
       ['Dolgozó', user?.username],
       ['Dátum',   datum],
@@ -773,6 +762,15 @@ async function postTarolo() {
       ['Leírás',  leiras]
     ]));
   }
+
+  const item = {
+    datum,
+    'azonosító': azon || '—',
+    'művelet':   muv,
+    'leírás':    leiras,
+    rogzitveKor: now(), userId: user?.id
+  };
+  saveFeedItem(LS.tarolo, item);
 
   ['taroDatum','taroAzon','taroLeiras'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('taroKep').value = '';
@@ -949,8 +947,8 @@ async function postJelentes() {
 
 // ── PROJEKTEK ─────────────────────────────────────────────────────────────
 async function createProjekt() {
-  const nev     = val('projNev');
-  const leiras  = val('projLeiras');
+  const nev      = val('projNev');
+  const leiras   = val('projLeiras');
   const hatarido = val('projHatarido');
   if(!nev || !leiras) { showMsg('projCreateMsg','err','❌ Név és leírás kötelező!'); return; }
   showMsg('projCreateMsg','loading','<span class="spinner"></span> Létrehozás...');
@@ -961,30 +959,34 @@ async function createProjekt() {
       body: JSON.stringify({ name: nev, description: leiras, deadline: hatarido })
     });
     if(!res.ok) throw new Error();
-    let imageUrl = null;
+
     const kepFile = document.getElementById('projKep')?.files?.[0];
     if(kepFile) {
-    const form = new FormData();
-    form.append('file', kepFile);
-    form.append('webhook', WH.projektek);
-    form.append('title', `📁 Új projekt: ${nev}`);
-    form.append('description', `👷 **${user?.username}** | ${leiras}`);
-  try {
-    await fetch(WORKER + '/upload/image', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token },
-      body: form
-    });
-  } catch(e) { console.warn('Kép hiba:', e); }
-}
-    await sendWebhook(WH.projektek, buildEmbed('📁 Új projekt létrehozva: '+nev, 0xef7a14, [
-      ['Létrehozta', user?.username],
-      ['Leírás',     leiras],
-      ['Határidő',   hatarido || '—']
-    ]));
+      const form = new FormData();
+      form.append('file', kepFile);
+      form.append('webhook', WH.projektek);
+      form.append('title', `📁 Új projekt: ${nev}`);
+      form.append('description', `👷 **${user?.username}** | ${leiras} | Határidő: ${hatarido||'—'}`);
+      try {
+        await fetch(WORKER + '/upload/image', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+          body: form
+        });
+      } catch(e) { console.warn('Kép hiba:', e); }
+    } else {
+      await sendWebhook(WH.projektek, buildEmbed('📁 Új projekt létrehozva: '+nev, 0xef7a14, [
+        ['Létrehozta', user?.username],
+        ['Leírás',     leiras],
+        ['Határidő',   hatarido || '—']
+      ]));
+    }
+
     document.getElementById('projNev').value = '';
     document.getElementById('projLeiras').value = '';
     document.getElementById('projHatarido').value = '';
+    document.getElementById('projKep').value = '';
+    document.getElementById('projKepPreview').style.display = 'none';
     showMsg('projCreateMsg','ok','✅ Projekt létrehozva!');
     loadProjektek();
   } catch(e) { showMsg('projCreateMsg','err','❌ Hiba a létrehozás során.'); }
