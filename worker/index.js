@@ -72,6 +72,7 @@ export default {
       if (url.pathname === '/event/unsubscribe')     return handleUnsubscribe(request, env);
       if (url.pathname === '/admin/users')           return handleAdminUsers(request, env);
       if (url.pathname === '/admin/set-supervisor')  return handleSetSupervisor(request, env);
+      if (url.pathname === '/admin/set-worker')      return handleSetWorker(request, env);
       // ticket endpoints
       if (url.pathname === '/ticket/create')         return handleTicketCreate(request, env);
       if (url.pathname === '/ticket/list')           return handleTicketList(request, env);
@@ -95,8 +96,10 @@ async function initDB(env) {
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, user_id TEXT, email TEXT, username TEXT, created_at INTEGER)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, user_id TEXT, username TEXT, subject TEXT, status TEXT DEFAULT \'idle\', claimed_by TEXT, claimed_by_name TEXT, opened_at INTEGER, claimed_at INTEGER, closed_at INTEGER, created_at INTEGER)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS ticket_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id TEXT, user_id TEXT, username TEXT, message TEXT, is_staff INTEGER DEFAULT 0, created_at INTEGER)').run();
+  // ALTER TABLE migrations - safe, duplikálás ellen védett
   for (const col of [
     'ALTER TABLE users ADD COLUMN is_supervisor INTEGER DEFAULT 0',
+    'ALTER TABLE users ADD COLUMN is_worker INTEGER DEFAULT 0',
     'ALTER TABLE events ADD COLUMN creator_name TEXT',
     'ALTER TABLE events ADD COLUMN discord_message_id TEXT',
     'ALTER TABLE events ADD COLUMN discord_webhook_type TEXT',
@@ -217,7 +220,6 @@ async function handleTicketClose(request, env) {
     return jsonRes({ error: 'Nincs jogosults\u00e1god!' }, 403);
   const now = Date.now();
   await env.DB.prepare('UPDATE tickets SET status=\'closed\', closed_at=?1 WHERE id=?2').bind(now, ticket_id).run();
-  // build transcript
   const msgs = await env.DB.prepare('SELECT * FROM ticket_messages WHERE ticket_id=?1 ORDER BY created_at ASC').bind(ticket_id).all();
   const lines = msgs.results.map(m => {
     const t = new Date(m.created_at).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
@@ -279,21 +281,63 @@ async function handleTicketSend(request, env) {
   return jsonRes({ ok: true });
 }
 
-// ---- existing handlers ----
+// ---- admin handlers ----
+
+// /admin/users - Admin és Supervisor is láthatja
 async function handleAdminUsers(request, env) {
   const user = await authUser(request, env);
-  if (!user || !user.isAdmin) return jsonRes({ error: 'Forbidden' }, 403);
-  const rows = await env.DB.prepare('SELECT id, discord_username, email, is_admin, is_supervisor, created_at FROM users ORDER BY created_at DESC').all();
+  if (!user || (!user.isAdmin && !user.isSupervisor)) return jsonRes({ error: 'Forbidden' }, 403);
+  const rows = await env.DB.prepare(
+    'SELECT id, discord_username, email, is_admin, is_supervisor, is_worker, created_at FROM users ORDER BY created_at DESC'
+  ).all();
   return jsonRes(rows.results);
 }
+
+// /admin/set-supervisor - CSAK ADMIN
 async function handleSetSupervisor(request, env) {
   if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
   const user = await authUser(request, env);
-  if (!user || !user.isAdmin) return jsonRes({ error: 'Forbidden' }, 403);
+  if (!user || !user.isAdmin) return jsonRes({ error: 'Csak admin jelölhet ki supervisort!' }, 403);
   const { user_id, value } = await request.json();
-  await env.DB.prepare('UPDATE users SET is_supervisor=?1 WHERE id=?2').bind(value ? 1 : 0, user_id).run();
+  if (!user_id) return jsonRes({ error: 'Hiányzó user_id' }, 400);
+  // Ha supervisorrá tesszük, a worker jogot levesszük (supervisor > worker)
+  if (value) {
+    await env.DB.prepare('UPDATE users SET is_supervisor=1, is_worker=0 WHERE id=?1').bind(user_id).run();
+  } else {
+    await env.DB.prepare('UPDATE users SET is_supervisor=0 WHERE id=?1').bind(user_id).run();
+  }
+  await sendEmbed(WEBHOOK_LOG, {
+    title: value ? '\u2B50 Supervisor kijelölve' : '\u274c Supervisor elvetve',
+    description: `**${user.username}** ${value ? 'supervisorrá jelölt' : 'elvette a supervisor jogot'} (user_id: ${user_id})`,
+    color: value ? 0x93c5fd : 0x64748b,
+    timestamp: new Date().toISOString(),
+  });
   return jsonRes({ ok: true });
 }
+
+// /admin/set-worker - ADMIN ÉS SUPERVISOR
+async function handleSetWorker(request, env) {
+  if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
+  const user = await authUser(request, env);
+  if (!user || (!user.isAdmin && !user.isSupervisor)) return jsonRes({ error: 'Nincs jogosultságod!' }, 403);
+  const { user_id, value } = await request.json();
+  if (!user_id) return jsonRes({ error: 'Hiányzó user_id' }, 400);
+  // Supervisor nem tehet supervisort dolgozóvá
+  const target = await env.DB.prepare('SELECT is_admin, is_supervisor FROM users WHERE id=?1').bind(user_id).first();
+  if (!target) return jsonRes({ error: 'Felhasználó nem található' }, 404);
+  if (target.is_admin) return jsonRes({ error: 'Admin jogait nem módosíthatod!' }, 403);
+  if (target.is_supervisor && !user.isAdmin) return jsonRes({ error: 'Supervisor jogait csak admin módosíthatja!' }, 403);
+  await env.DB.prepare('UPDATE users SET is_worker=?1 WHERE id=?2').bind(value ? 1 : 0, user_id).run();
+  await sendEmbed(WEBHOOK_LOG, {
+    title: value ? '\uD83D\uDC77 Dolgozó kijelölve' : '\u274c Dolgozó jog elvetve',
+    description: `**${user.username}** ${value ? 'dolgozóvá jelölt' : 'elvette a dolgozó jogot'} (user_id: ${user_id})`,
+    color: value ? 0x86efac : 0x64748b,
+    timestamp: new Date().toISOString(),
+  });
+  return jsonRes({ ok: true });
+}
+
+// ---- existing handlers ----
 async function handleDeleteEvent(request, env) {
   if (request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
   const user = await authUser(request, env);
@@ -387,18 +431,26 @@ async function handleDiscordCallback(url, request, env) {
   const isAdmin = ADMINS.includes(dUser.username.toLowerCase());
   const now = Date.now();
   await env.DB.prepare('INSERT INTO users (id, discord_id, discord_username, email, is_admin, created_at) VALUES (?1,?2,?3,?4,?5,?6) ON CONFLICT(discord_id) DO UPDATE SET discord_username=excluded.discord_username, email=excluded.email, is_admin=excluded.is_admin').bind(dUser.id, dUser.id, dUser.username, dUser.email || null, isAdmin ? 1 : 0, now).run();
-  const dbUser = await env.DB.prepare('SELECT is_supervisor FROM users WHERE discord_id=?1').bind(dUser.id).first();
+  const dbUser = await env.DB.prepare('SELECT is_supervisor, is_worker FROM users WHERE discord_id=?1').bind(dUser.id).first();
   const isSupervisor = dbUser?.is_supervisor === 1;
+  const isWorker     = dbUser?.is_worker === 1;
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   await env.DB.prepare('INSERT INTO logs (user_id, action, ip, user_agent, created_at) VALUES (?1,?2,?3,?4,?5)').bind(dUser.id, 'discord_login', ip, request.headers.get('User-Agent') || '', now).run();
   await sendEmbed(WEBHOOK_LOG, { title: '\uD83D\uDD11 Log: bel\u00e9p\u00e9s', description: `**${dUser.username}** bejelentkezett Discord-dal`, color: 0x5865f2, fields: [{ name: '\uD83D\uDCCD IP', value: ip, inline: true }], timestamp: new Date().toISOString() });
-  const payload = { id: dUser.id, discord_id: dUser.id, username: dUser.username, avatar: dUser.avatar, email: dUser.email || null, roblox_username: null, isAdmin, isSupervisor, exp: now + 86400000 };
+  const payload = { id: dUser.id, discord_id: dUser.id, username: dUser.username, avatar: dUser.avatar, email: dUser.email || null, roblox_username: null, isAdmin, isSupervisor, isWorker, exp: now + 86400000 };
   const token = await signToken(payload, env.JWT_SECRET);
   return Response.redirect(`https://gekox23.github.io/mk-mernokseg/?token=${token}`, 302);
 }
 async function handleMe(request, env) {
   const user = await authUser(request, env);
   if (!user) return jsonRes({ error: 'Unauthorized' }, 401);
+  // isWorker fréssel átfésüljük az adatbázisból (token lejart esetén is naprakész legyen)
+  const dbUser = await env.DB.prepare('SELECT is_supervisor, is_worker, is_admin FROM users WHERE id=?1').bind(user.id).first();
+  if (dbUser) {
+    user.isSupervisor = dbUser.is_supervisor === 1;
+    user.isWorker     = dbUser.is_worker === 1;
+    user.isAdmin      = dbUser.is_admin === 1;
+  }
   return jsonRes(user);
 }
 async function handleLog(request, env) {
