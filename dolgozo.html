@@ -990,25 +990,132 @@ async function createProjekt() {
     loadProjektek();
   } catch(e) { showMsg('projCreateMsg','err','❌ Hiba a létrehozás során.'); }
 }
+async function toggleTagok(projectId) {
+  const box = document.getElementById('tagok-' + projectId);
+  if(box.style.display === 'block') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div style="font-size:12px;color:#4a6580">Betöltés...</div>';
+  try {
+    const res = await fetch(WORKER + '/projektek/tagok?id=' + projectId, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+    renderTagok(projectId, data);
+  } catch(e) {
+    box.innerHTML = '<div style="font-size:12px;color:#f87171">Hiba a tagok betöltésekor.</div>';
+  }
+}
 
+function renderTagok(projectId, tagok) {
+  const box = document.getElementById('tagok-' + projectId);
+  box.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:#dce8f5;margin-bottom:8px">👥 Projekt tagok</div>
+    ${tagok.length ? tagok.map(t => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a2c42">
+        <span style="font-size:13px;color:#dce8f5">👷 ${t.username}</span>
+        <button class="btn-sm btn-del" onclick="kickTag('${projectId}','${t.user_id}','${t.username}',this)">❌ Eltávolít</button>
+      </div>
+    `).join('') : '<div style="font-size:12px;color:#4a6580">Még nincs tag.</div>'}
+    <div style="margin-top:12px">
+      <div style="font-size:12px;color:#8fa4bc;margin-bottom:6px">➕ Tag hozzáadása (felhasználónév):</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="addTagInput-${projectId}" placeholder="pl. kovacs_janos" style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid #2b4668;background:#0f1826;color:#dce8f5;font-size:13px">
+        <button class="btn-sm btn-green" onclick="addTag('${projectId}')">➕ Hozzáad</button>
+      </div>
+      <div class="msg" id="tagMsg-${projectId}" style="margin-top:8px"></div>
+    </div>`;
+}
+
+async function addTag(projectId) {
+  const input    = document.getElementById('addTagInput-' + projectId);
+  const username = input?.value?.trim();
+  if(!username) return;
+  showMsg('tagMsg-' + projectId, 'loading', '<span class="spinner"></span> Hozzáadás...');
+  try {
+    const res = await fetch(WORKER + '/projektek/tag/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ project_id: projectId, username })
+    });
+    const data = await res.json();
+    if(!res.ok) { showMsg('tagMsg-' + projectId, 'err', '❌ ' + (data.error || 'Hiba')); return; }
+    showMsg('tagMsg-' + projectId, 'ok', '✅ Tag hozzáadva!');
+    input.value = '';
+    // frissítjük a listát
+    const res2 = await fetch(WORKER + '/projektek/tagok?id=' + projectId, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    renderTagok(projectId, await res2.json());
+  } catch(e) { showMsg('tagMsg-' + projectId, 'err', '❌ Hálózati hiba'); }
+}
+
+async function kickTag(projectId, userId, username, btn) {
+  if(!confirm(`Biztosan eltávolítod: ${username}?`)) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(WORKER + '/projektek/tag/kick', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ project_id: projectId, user_id: userId })
+    });
+    if(res.ok) {
+      const res2 = await fetch(WORKER + '/projektek/tagok?id=' + projectId, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      renderTagok(projectId, await res2.json());
+    }
+  } catch(e) { btn.disabled = false; }
+}
+
+async function deleteProjekt(projectId) {
+  if(!confirm('Biztosan törlöd a projektet?')) return;
+  try {
+    const res = await fetch(WORKER + '/projektek/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ project_id: projectId })
+    });
+    if(res.ok) {
+      document.getElementById('proj-' + projectId)?.remove();
+    }
+  } catch(e) {}
+}
 async function loadProjektek() {
   const container = document.getElementById('projektekList');
   container.innerHTML = '<div style="color:#4a6580;font-size:13px"><span class="spinner"></span> Betöltés...</div>';
   try {
-    const res = await fetch(WORKER + '/projektek', { headers: { Authorization: 'Bearer ' + token } });
+    const res = await fetch(WORKER + '/projektek', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
     if(!res.ok) throw new Error();
     const data = await res.json();
-    if(!data.length) { container.innerHTML = '<div style="color:#4a6580;font-size:13px">Nincsenek elérhető projektek.</div>'; return; }
-    container.innerHTML = data.map(p => `
-      <div class="proj-card">
-        <div class="proj-title">${p.name || p.title}</div>
-        <div class="proj-meta">Határidő: ${p.deadline || '—'}</div>
-        <div class="proj-desc">${p.description || ''}</div>
-        ${p.joined
-          ? `<span class="badge badge-ok">✅ Feljelentkezve</span>`
-          : `<button class="btn-sm btn-edit" onclick="feljelentkezik('${p.id}',this)">➕ Feljelentkezés</button>`}
-      </div>
-    `).join('');
+    if(!data.length) {
+      container.innerHTML = '<div style="color:#4a6580;font-size:13px">Nincsenek elérhető projektek.</div>';
+      return;
+    }
+    container.innerHTML = data.map(p => {
+      const isOwner = user?.isAdmin || p.created_by === user?.id;
+      return `
+        <div class="proj-card" id="proj-${p.id}">
+          <div class="proj-title">${p.name}</div>
+          <div class="proj-meta">
+            Létrehozta: ${p.creator_name || '—'} •
+            Határidő: ${p.deadline || '—'}
+          </div>
+          <div class="proj-desc">${p.description || ''}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            ${p.joined
+              ? '<span class="badge badge-ok">✅ Feljelentkezve</span>'
+              : `<button class="btn-sm btn-edit" onclick="feljelentkezik('${p.id}',this)">➕ Feljelentkezés</button>`
+            }
+            ${isOwner ? `<button class="btn-sm btn-green" onclick="toggleTagok('${p.id}')">👥 Tagok kezelése</button>` : ''}
+            ${user?.isAdmin ? `<button class="btn-sm btn-del" onclick="deleteProjekt('${p.id}')">🗑️ Töröl</button>` : ''}
+          </div>
+          <div id="tagok-${p.id}" style="display:none;margin-top:14px">
+            <div style="font-size:12px;color:#4a6580;margin-bottom:8px">Betöltés...</div>
+          </div>
+        </div>`;
+    }).join('');
   } catch(e) {
     container.innerHTML = '<div style="color:#4a6580;font-size:13px">Projektek nem elérhetők.</div>';
   }
@@ -1028,7 +1135,9 @@ async function feljelentkezik(projectId, btn) {
         ['Dolgozó',    user?.username],
         ['Projekt ID', projectId]
       ]));
-    } else { btn.disabled = false; btn.textContent = '➕ Feljelentkezés'; }
+    } else {
+      btn.disabled = false; btn.textContent = '➕ Feljelentkezés';
+    }
   } catch(e) { btn.disabled = false; btn.textContent = '➕ Feljelentkezés'; }
 }
 
@@ -1133,6 +1242,72 @@ async function init() {
 function logout() {
   localStorage.removeItem('mk_token');
   window.location.href = '/mk-mernokseg/';
+}
+async function handleGetTagok(request, env) {
+  const user = await authUser(request, env);
+  if(!user) return jsonRes({ error: 'Unauthorized' }, 401);
+  const url = new URL(request.url);
+  const project_id = url.searchParams.get('id');
+  if(!project_id) return jsonRes({ error: 'Hiányzó id' }, 400);
+  const proj = await env.DB.prepare('SELECT * FROM projektek WHERE id=?1').bind(project_id).first();
+  if(!proj) return jsonRes({ error: 'Nem található' }, 404);
+  if(!user.isAdmin && proj.created_by !== user.id)
+    return jsonRes({ error: 'Nincs jogosultságod!' }, 403);
+  const rows = await env.DB.prepare(
+    'SELECT * FROM projekt_tagok WHERE project_id=?1 ORDER BY joined_at ASC'
+  ).bind(project_id).all();
+  return jsonRes(rows.results);
+}
+
+async function handleAddTag(request, env) {
+  if(request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
+  const user = await authUser(request, env);
+  if(!user) return jsonRes({ error: 'Unauthorized' }, 401);
+  const { project_id, username } = await request.json();
+  if(!project_id || !username) return jsonRes({ error: 'Hiányzó adatok' }, 400);
+  const proj = await env.DB.prepare('SELECT * FROM projektek WHERE id=?1').bind(project_id).first();
+  if(!proj) return jsonRes({ error: 'Projekt nem található' }, 404);
+  if(!user.isAdmin && proj.created_by !== user.id)
+    return jsonRes({ error: 'Nincs jogosultságod!' }, 403);
+  const target = await env.DB.prepare(
+    'SELECT id FROM users WHERE discord_username=?1'
+  ).bind(username).first();
+  if(!target) return jsonRes({ error: 'Felhasználó nem található!' }, 404);
+  const existing = await env.DB.prepare(
+    'SELECT id FROM projekt_tagok WHERE project_id=?1 AND user_id=?2'
+  ).bind(project_id, target.id).first();
+  if(existing) return jsonRes({ error: 'Már tag!' }, 409);
+  await env.DB.prepare(
+    'INSERT INTO projekt_tagok (project_id, user_id, username, joined_at) VALUES (?1,?2,?3,?4)'
+  ).bind(project_id, target.id, username, Date.now()).run();
+  return jsonRes({ ok: true });
+}
+
+async function handleKickTag(request, env) {
+  if(request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
+  const user = await authUser(request, env);
+  if(!user) return jsonRes({ error: 'Unauthorized' }, 401);
+  const { project_id, user_id } = await request.json();
+  if(!project_id || !user_id) return jsonRes({ error: 'Hiányzó adatok' }, 400);
+  const proj = await env.DB.prepare('SELECT * FROM projektek WHERE id=?1').bind(project_id).first();
+  if(!proj) return jsonRes({ error: 'Projekt nem található' }, 404);
+  if(!user.isAdmin && proj.created_by !== user.id)
+    return jsonRes({ error: 'Nincs jogosultságod!' }, 403);
+  await env.DB.prepare(
+    'DELETE FROM projekt_tagok WHERE project_id=?1 AND user_id=?2'
+  ).bind(project_id, user_id).run();
+  return jsonRes({ ok: true });
+}
+
+async function handleDeleteProjekt(request, env) {
+  if(request.method !== 'POST') return jsonRes({ error: 'POST only' }, 405);
+  const user = await authUser(request, env);
+  if(!user || !user.isAdmin) return jsonRes({ error: 'Csak admin törölhet projektet!' }, 403);
+  const { project_id } = await request.json();
+  if(!project_id) return jsonRes({ error: 'Hiányzó project_id' }, 400);
+  await env.DB.prepare('DELETE FROM projekt_tagok WHERE project_id=?1').bind(project_id).run();
+  await env.DB.prepare('DELETE FROM projektek WHERE id=?1').bind(project_id).run();
+  return jsonRes({ ok: true });
 }
 
 init();
