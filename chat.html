@@ -141,25 +141,76 @@ function hideChips(){document.getElementById('aiChips').innerHTML='';}
 function addAiMsg(type,html){const body=document.getElementById('aiBody');const div=document.createElement('div');div.className='ai-msg '+type;div.innerHTML=html;body.appendChild(div);body.scrollTop=body.scrollHeight;return div;}
 function aiChipClick(text){addAiMsg('user',esc(text));hideChips();handleAiQuery(text);}
 function aiSend(){const inp=document.getElementById('aiInput');const val=inp.value.trim();if(!val)return;inp.value='';addAiMsg('user',esc(val));hideChips();handleAiQuery(val);}
+
 async function handleAiQuery(q){
   const lower=q.toLowerCase();
-  if(lower.includes('esemény')||lower.includes('mikor')||lower.includes('program')||lower.includes('toborzás')||lower.includes('oktatás')||lower.includes('lezárás')||lower.includes('útlez')){
-    const loading=addAiMsg('bot','⏳ Betöltöm az eseményeket...');
-    try{const res=await fetch(WORKER_URL+'/events');const events=await res.json();const now=Date.now();const upcoming=events.filter(e=>e.end_time>now).sort((a,b)=>a.start_time-b.start_time).slice(0,6);
-    if(!upcoming.length){loading.innerHTML='🔴 Jelenleg nincs közelgő esemény meghirdetve.';}else{const typeLabel={toborzas:'🎮 Toborzás',foglalas:'📚 Oktatás',lezaras:'🚧 Útlezárás'};let html='<strong>Közelgő események:</strong><br><br>';upcoming.forEach(e=>{const d=new Date(e.start_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});html+=`${typeLabel[e.type]||'📌'} <strong>${esc(e.title)}</strong> – ${d}<br>`;});loading.innerHTML=html;}}catch(err){loading.innerHTML='⚠️ Nem sikerült betölteni az eseményeket.';}
+
+  // 1. Specifikus: toborzás - MINDIG előbb, mint az általános esemény
+  if(lower.includes('toborzás')||lower.includes('toborzas')||lower.includes('toborzas')||lower.includes('felvétel')){
+    addAiMsg('bot','🎮 <strong>Toborzás</strong>: Rendszeres felvételi esemény, ahol új tagokat veszünk fel a Mezőkovácsházi Mérnökségbe. Discord alapú elbeszélgetéssel zajlik. Figyelj az eseménynaptárban a dátumokra!');
     showSatisfaction();return;
   }
-  if(lower.includes('jelentkez')||lower.includes('hogyan')||lower.includes('foglal')){addAiMsg('bot','✅ Jelentkezni úgy tudsz:<br><br>1. Lépj be Discord fiókoddal a főoldalon.<br>2. Válaszd ki az eseményt a <strong>Mai események</strong> listából.<br>3. Kattints a <strong>Jelentkezem</strong> gombra.');showSatisfaction();return;}
-  if(lower.includes('toborzás')||lower.includes('toborzas')){addAiMsg('bot','🎮 <strong>Toborzás</strong>: Rendszeres felvételi esemény, ahol új tagokat veszünk fel a Mezőkovácsházi Mérnökségbe. Discord alapú elbeszélgetéssel zajlik. Figyelj az eseménynaptárban a dátumokra!');showSatisfaction();return;}
-  if(lower.includes('oktatás')||lower.includes('tanulás')){addAiMsg('bot','📚 <strong>Oktatás</strong>: Belső képzés meglévő tagok számára. Supervisorok hirdetik meg, és foglalással lehet rá jelentkezni. Az oktatáson részt vevők előnyt szereznek a szakmai fejlődésben.');showSatisfaction();return;}
-  if(lower.includes('útlezárás')||lower.includes('lezárás')||lower.includes('zárva')||lower.includes('útinfo')){
+
+  // 2. Specifikus: oktatás
+  if(lower.includes('oktatás')||lower.includes('oktatas')||lower.includes('tanítas')||lower.includes('tanulás')||lower.includes('képzés')){
+    addAiMsg('bot','📚 <strong>Oktatás</strong>: Belső képzés meglévő tagok számára. Supervisorok hirdetik meg, és foglalással lehet rá jelentkezni ezen az oldalon. Az oktatáson részt vevők előnyt szereznek a szakmai fejlődésben.');
+    showSatisfaction();return;
+  }
+
+  // 3. Specifikus: útlezárás / zárás
+  if(lower.includes('útlezárás')||lower.includes('utlezaras')||lower.includes('útinfo')||lower.includes('utinfo')||lower.includes('zárva')||lower.includes('lezárt')){
     const loading=addAiMsg('bot','⏳ Lekérem az aktív útlezárásokat...');
-    try{const res=await fetch(WORKER_URL+'/events');const events=await res.json();const now=Date.now();const active=events.filter(e=>e.type==='lezaras'&&e.start_time<=now&&e.end_time>=now);
-    if(!active.length){loading.innerHTML='✅ Jelenleg nincs aktív útlezárás.';}else{let html='🚧 <strong>Aktív útlezárások:</strong><br><br>';active.forEach(e=>{const end=new Date(e.end_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',hour:'2-digit',minute:'2-digit'});html+=`• <strong>${esc(e.title)}</strong> – ${esc(e.description||'')} (vége: ${end})<br>`;});loading.innerHTML=html;}}catch(err){loading.innerHTML='⚠️ Nem sikerült betölteni az útlezárásokat.';}
+    try{
+      const res=await fetch(WORKER_URL+'/events');
+      const events=await res.json();
+      const now=Date.now();
+      const active=events.filter(e=>e.type==='lezaras'&&e.start_time<=now&&e.end_time>=now);
+      if(!active.length){loading.innerHTML='✅ Jelenleg nincs aktív útlezárás.'}
+      else{
+        let html='🚧 <strong>Aktív útlezárások:</strong><br><br>';
+        active.forEach(e=>{
+          const end=new Date(e.end_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',hour:'2-digit',minute:'2-digit'});
+          html+=`• <strong>${esc(e.title)}</strong> – ${esc(e.description||'')} (vége: ${end})<br>`;
+        });
+        loading.innerHTML=html;
+      }
+    }catch(err){loading.innerHTML='⚠️ Nem sikerült betölteni az útlezárásokat.';}
     showSatisfaction();return;
   }
-  addAiMsg('bot','🤔 Ezt a kérdést nem tudom pontosan megválaszolni. Próbálj egyet a gyors kérdések közül, vagy nyiss ticketet élő segítségért!');showSatisfaction();
+
+  // 4. Specifikus: hogyan jelentkezzek / foglalás
+  if(lower.includes('jelentkez')||lower.includes('hogyan')||lower.includes('foglal')){
+    addAiMsg('bot','✅ Jelentkezni úgy tudsz:<br><br>1. Lépj be Discord fiókoddal a főoldalon.<br>2. Válaszd ki az eseményt a <strong>Mai események</strong> listából.<br>3. Kattints a <strong>Jelentkezem</strong> gombra.');
+    showSatisfaction();return;
+  }
+
+  // 5. Általános: közelgő események listája
+  if(lower.includes('esemény')||lower.includes('mikor')||lower.includes('program')||lower.includes('közelgő')||lower.includes('lesz')){
+    const loading=addAiMsg('bot','⏳ Betöltöm a közelgő eseményeket...');
+    try{
+      const res=await fetch(WORKER_URL+'/events');
+      const events=await res.json();
+      const now=Date.now();
+      const upcoming=events.filter(e=>e.end_time>now).sort((a,b)=>a.start_time-b.start_time).slice(0,6);
+      if(!upcoming.length){loading.innerHTML='🔴 Jelenleg nincs közelgő esemény meghirdetve.';}
+      else{
+        const typeLabel={toborzas:'🎮 Toborzás',foglalas:'📚 Oktatás',lezaras:'🚧 Útlezárás'};
+        let html='<strong>Közelgő események:</strong><br><br>';
+        upcoming.forEach(e=>{
+          const d=new Date(e.start_time).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+          html+=`${typeLabel[e.type]||'📌'} <strong>${esc(e.title)}</strong> – ${d}<br>`;
+        });
+        loading.innerHTML=html;
+      }
+    }catch(err){loading.innerHTML='⚠️ Nem sikerült betölteni az eseményeket.';}
+    showSatisfaction();return;
+  }
+
+  // 6. Fallback
+  addAiMsg('bot','🤔 Ezt a kérdést nem tudom pontosan megválaszolni. Próbálj egyet a gyors kérdések közül, vagy nyiss ticketet!');
+  showSatisfaction();
 }
+
 function showSatisfaction(){
   if(aiDone)return;aiDone=true;
   const body=document.getElementById('aiBody');const box=document.createElement('div');box.className='sat-box';
@@ -175,36 +226,115 @@ async function satNo(){
   }
   const lastUserMsg=[...document.querySelectorAll('.ai-msg.user')].pop()?.innerText||'Segítség kérés';
   addAiMsg('bot','⏳ Ticket létrehozása...');
-  try{const res=await fetch(WORKER_URL+'/ticket/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({subject:lastUserMsg.slice(0,100),first_message:lastUserMsg})});const data=await res.json();if(data.ok){addAiMsg('bot','🎫 Ticketedet megnyitottuk! Egy supervisor hamarosan átveszi.<br><br><button onclick="switchTab(\'tickets\');openTicketById(\''+data.id+'\')" style="background:#ef7a14;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700">🎫 Ticket megtekintése</button>');}}catch(e){addAiMsg('bot','⚠️ Nem sikerült ticket létrehozása. Próbáld a Ticketek fülön.');}
+  try{
+    const res=await fetch(WORKER_URL+'/ticket/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({subject:lastUserMsg.slice(0,100),first_message:lastUserMsg})});
+    const data=await res.json();
+    if(data.ok){addAiMsg('bot','🎫 Ticketedet megnyitottuk! Egy supervisor hamarosan átveszi.<br><br><button onclick="switchTab(\'tickets\');openTicketById(\''+data.id+'\')" style="background:#ef7a14;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700">🎫 Ticket megtekintése</button>');}
+  }catch(e){addAiMsg('bot','⚠️ Nem sikerült ticket létrehozása. Próbáld a Ticketek fülön.');}
   aiDone=false;
 }
-function setupTickets(){const row=document.getElementById('newTicketRow');if(!currentUser){row.innerHTML=`<div class="login-notice" style="padding:10px 0">Tickethez <a href="${DISCORD_OAUTH_URL}">lépj be Discord fiókoddal</a>.</div>`;return;}if(!currentUser.isAdmin&&!currentUser.isSupervisor){row.innerHTML=`<button onclick="openNewTicket()" style="background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">+ Új ticket nyitása</button>`;}}
+function setupTickets(){
+  const row=document.getElementById('newTicketRow');
+  if(!currentUser){row.innerHTML=`<div class="login-notice" style="padding:10px 0">Tickethez <a href="${DISCORD_OAUTH_URL}">lépj be Discord fiókoddal</a>.</div>`;return;}
+  if(!currentUser.isAdmin&&!currentUser.isSupervisor){row.innerHTML=`<button onclick="openNewTicket()" style="background:#ef7a14;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">+ Új ticket nyitása</button>`;}
+}
 async function refreshTickets(){
   if(!currentUser){document.getElementById('ticketListEl').innerHTML='<div class="empty-note">Bejelentkezés szükséges.</div>';return;}
-  try{const res=await fetch(WORKER_URL+'/ticket/list',{headers:{Authorization:'Bearer '+getToken()}});const tickets=await res.json();const el=document.getElementById('ticketListEl');
-  if(!tickets.length){el.innerHTML='<div class="empty-note">Nincsenek ticketek.</div>';return;}
-  const open=tickets.filter(t=>t.status!=='closed').length;const badge=document.getElementById('ticketBadge');if(open>0){badge.textContent=open;badge.style.display='inline';}else badge.style.display='none';
-  el.innerHTML=tickets.map(t=>{const stMap={idle:'st-idle',open:'st-open',closed:'st-closed'};const stLabel={idle:'⏳ Várakozás',open:'🟢 Nyitva',closed:'⚫ Lezárva'};const d=new Date(t.created_at).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});return `<div class="ticket-item" onclick="openTicketById('${t.id}')"><h4>${esc(t.subject)} <span class="ticket-status ${stMap[t.status]||''}">${stLabel[t.status]||t.status}</span></h4><p>${esc(t.username)} · ${d}${t.claimed_by_name?' · Kezeli: '+esc(t.claimed_by_name):''}</p></div>`;}).join('');}catch(e){}
+  try{
+    const res=await fetch(WORKER_URL+'/ticket/list',{headers:{Authorization:'Bearer '+getToken()}});
+    const tickets=await res.json();
+    const el=document.getElementById('ticketListEl');
+    if(!tickets.length){el.innerHTML='<div class="empty-note">Nincsenek ticketek.</div>';return;}
+    const open=tickets.filter(t=>t.status!=='closed').length;
+    const badge=document.getElementById('ticketBadge');
+    if(open>0){badge.textContent=open;badge.style.display='inline';}else badge.style.display='none';
+    el.innerHTML=tickets.map(t=>{
+      const stMap={idle:'st-idle',open:'st-open',closed:'st-closed'};
+      const stLabel={idle:'⏳ Várakozás',open:'🟢 Nyitva',closed:'⚫ Lezárva'};
+      const d=new Date(t.created_at).toLocaleString('hu-HU',{timeZone:'Europe/Budapest',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      return `<div class="ticket-item" onclick="openTicketById('${t.id}')"><h4>${esc(t.subject)} <span class="ticket-status ${stMap[t.status]||''}">${stLabel[t.status]||t.status}</span></h4><p>${esc(t.username)} · ${d}${t.claimed_by_name?' · Kezeli: '+esc(t.claimed_by_name):''}</p></div>`;
+    }).join('');
+  }catch(e){}
 }
-async function openTicketById(id){activeTicketId=id;document.getElementById('ticketListView').style.display='none';document.getElementById('ticketChatView').style.display='flex';switchTab('tickets');await loadTicketChat();if(ticketPollInterval)clearInterval(ticketPollInterval);ticketPollInterval=setInterval(loadTicketChat,4000);}
+async function openTicketById(id){
+  activeTicketId=id;
+  document.getElementById('ticketListView').style.display='none';
+  document.getElementById('ticketChatView').style.display='flex';
+  switchTab('tickets');
+  await loadTicketChat();
+  if(ticketPollInterval)clearInterval(ticketPollInterval);
+  ticketPollInterval=setInterval(loadTicketChat,4000);
+}
 function openNewTicket(){const subject=prompt('Miben segíthetünk? (röviden)');if(!subject)return;createTicket(subject,'');}
-async function createTicket(subject,firstMsg){try{const res=await fetch(WORKER_URL+'/ticket/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({subject,first_message:firstMsg||subject})});const data=await res.json();if(data.ok)openTicketById(data.id);}catch(e){alert('Hiba a ticket létrehozásakor.');}}
+async function createTicket(subject,firstMsg){
+  try{
+    const res=await fetch(WORKER_URL+'/ticket/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({subject,first_message:firstMsg||subject})});
+    const data=await res.json();
+    if(data.ok)openTicketById(data.id);
+  }catch(e){alert('Hiba a ticket létrehozásakor.');}
+}
 async function loadTicketChat(){
   if(!activeTicketId)return;
-  try{const res=await fetch(WORKER_URL+'/ticket/messages?id='+activeTicketId,{headers:{Authorization:'Bearer '+getToken()}});const data=await res.json();const ticket=data.ticket;const msgs=data.messages||[];
-  document.getElementById('idleBanner').style.display=ticket.status==='idle'?'block':'none';
-  const box=document.getElementById('ticketMsgs');const wasBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;
-  box.innerHTML=msgs.map(m=>{const cls=m.is_staff?'staff':(m.user_id===currentUser?.id?'user-msg':'staff');const isSystem=m.username==='SYSTEM'||m.message.startsWith('👋 **');const t=new Date(m.created_at).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});if(isSystem)return `<div class="tmsg system">${esc(m.message)}</div>`;return `<div class="tmsg ${cls}"><div class="tmsg-name">${esc(m.username)} · ${t}</div>${esc(m.message)}</div>`;}).join('');
-  if(wasBottom)box.scrollTop=box.scrollHeight;
-  renderTicketActions(ticket);
-  const inputRow=document.getElementById('ticketInputRow');const canWrite=ticket.status!=='closed'&&(currentUser?.isAdmin||(currentUser?.isSupervisor&&ticket.claimed_by===currentUser.id)||ticket.user_id===currentUser?.id);inputRow.style.display=canWrite?'flex':'none';}catch(e){}
+  try{
+    const res=await fetch(WORKER_URL+'/ticket/messages?id='+activeTicketId,{headers:{Authorization:'Bearer '+getToken()}});
+    const data=await res.json();
+    const ticket=data.ticket;const msgs=data.messages||[];
+    document.getElementById('idleBanner').style.display=ticket.status==='idle'?'block':'none';
+    const box=document.getElementById('ticketMsgs');
+    const wasBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;
+    box.innerHTML=msgs.map(m=>{
+      const cls=m.is_staff?'staff':(m.user_id===currentUser?.id?'user-msg':'staff');
+      const isSystem=m.username==='SYSTEM'||m.message.startsWith('👋 **');
+      const t=new Date(m.created_at).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});
+      if(isSystem)return `<div class="tmsg system">${esc(m.message)}</div>`;
+      return `<div class="tmsg ${cls}"><div class="tmsg-name">${esc(m.username)} · ${t}</div>${esc(m.message)}</div>`;
+    }).join('');
+    if(wasBottom)box.scrollTop=box.scrollHeight;
+    renderTicketActions(ticket);
+    const inputRow=document.getElementById('ticketInputRow');
+    const canWrite=ticket.status!=='closed'&&(currentUser?.isAdmin||(currentUser?.isSupervisor&&ticket.claimed_by===currentUser.id)||ticket.user_id===currentUser?.id);
+    inputRow.style.display=canWrite?'flex':'none';
+  }catch(e){}
 }
-function renderTicketActions(ticket){const bar=document.getElementById('ticketActionBar');const isStaff=currentUser?.isAdmin||currentUser?.isSupervisor;const isClaimer=ticket.claimed_by===currentUser?.id;const isAdmin=currentUser?.isAdmin;let html=`<button class="btn-back" onclick="backToList()">← Vissza</button>`;if(ticket.status!=='closed'){if(isStaff&&!isClaimer&&ticket.status==='idle')html+=`<button class="btn-claim" onclick="claimTicket('${ticket.id}')">🙋 Átveszem</button>`;if(isAdmin&&isClaimer===false&&ticket.status==='open')html+=`<button class="btn-unclaim" onclick="unclaimTicket('${ticket.id}')">↩ Visszaad (admin)</button>`;if((isStaff&&isClaimer)||isAdmin)html+=`<button class="btn-close" onclick="closeTicket('${ticket.id}')">🔒 Lezárás</button>`;if(!isStaff&&ticket.user_id===currentUser?.id)html+=`<button class="btn-close" onclick="closeTicket('${ticket.id}')">🔒 Lezárás</button>`;}else{html+=`<span style="color:#4a6580;font-size:13px;padding:9px 0">⚫ Lezárva</span>`;}bar.innerHTML=html;}
+function renderTicketActions(ticket){
+  const bar=document.getElementById('ticketActionBar');
+  const isStaff=currentUser?.isAdmin||currentUser?.isSupervisor;
+  const isClaimer=ticket.claimed_by===currentUser?.id;
+  const isAdmin=currentUser?.isAdmin;
+  let html=`<button class="btn-back" onclick="backToList()">← Vissza</button>`;
+  if(ticket.status!=='closed'){
+    if(isStaff&&!isClaimer&&ticket.status==='idle')html+=`<button class="btn-claim" onclick="claimTicket('${ticket.id}')">🙋 Átveszem</button>`;
+    if(isAdmin&&isClaimer===false&&ticket.status==='open')html+=`<button class="btn-unclaim" onclick="unclaimTicket('${ticket.id}')">↩ Visszaad (admin)</button>`;
+    if((isStaff&&isClaimer)||isAdmin)html+=`<button class="btn-close" onclick="closeTicket('${ticket.id}')">🔒 Lezárás</button>`;
+    if(!isStaff&&ticket.user_id===currentUser?.id)html+=`<button class="btn-close" onclick="closeTicket('${ticket.id}')">🔒 Lezárás</button>`;
+  }else{
+    html+=`<span style="color:#4a6580;font-size:13px;padding:9px 0">⚫ Lezárva</span>`;
+  }
+  bar.innerHTML=html;
+}
 async function claimTicket(id){await fetch(WORKER_URL+'/ticket/claim',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:id})});loadTicketChat();}
 async function unclaimTicket(id){await fetch(WORKER_URL+'/ticket/unclaim',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:id})});loadTicketChat();}
-async function closeTicket(id){if(!confirm('Biztosan lezárod a ticketet?'))return;await fetch(WORKER_URL+'/ticket/close',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:id})});if(ticketPollInterval)clearInterval(ticketPollInterval);loadTicketChat();}
-async function ticketSend(){const inp=document.getElementById('ticketMsgInput');const msg=inp.value.trim();if(!msg||!activeTicketId)return;inp.value='';await fetch(WORKER_URL+'/ticket/send',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:activeTicketId,message:msg})});loadTicketChat();}
-function backToList(){if(ticketPollInterval)clearInterval(ticketPollInterval);activeTicketId=null;document.getElementById('ticketListView').style.display='flex';document.getElementById('ticketChatView').style.display='none';refreshTickets();}
+async function closeTicket(id){
+  if(!confirm('Biztosan lezárod a ticketet?'))return;
+  await fetch(WORKER_URL+'/ticket/close',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:id})});
+  if(ticketPollInterval)clearInterval(ticketPollInterval);
+  loadTicketChat();
+}
+async function ticketSend(){
+  const inp=document.getElementById('ticketMsgInput');
+  const msg=inp.value.trim();
+  if(!msg||!activeTicketId)return;
+  inp.value='';
+  await fetch(WORKER_URL+'/ticket/send',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken()},body:JSON.stringify({ticket_id:activeTicketId,message:msg})});
+  loadTicketChat();
+}
+function backToList(){
+  if(ticketPollInterval)clearInterval(ticketPollInterval);
+  activeTicketId=null;
+  document.getElementById('ticketListView').style.display='flex';
+  document.getElementById('ticketChatView').style.display='none';
+  refreshTickets();
+}
 init();
 </script>
 </body>
