@@ -687,15 +687,30 @@ async function postTankolas() {
   const osszeg  = val('tankOsszeg');
   const allomas = val('tankAllomas');
   const megj    = val('tankMegjegyzes');
+  const kepFile = document.getElementById('tankKep')?.files?.[0];
 
   if(!datum || !rsz || !liter || !osszeg) {
     showMsg('tankMsg','err','❌ Kötelező mezők hiányoznak!'); return;
   }
   showMsg('tankMsg','loading','<span class="spinner"></span> Rögzítés...');
 
-  await sendWebhook(
-    'https://discord.com/api/webhooks/1507036079860092928/t54hN8koMvjLewl0o_VjbRmKJNi9R104tCRKmdhIBXLB-Tlcuo-LpAmP6rC0XRgHtvjK',
-    buildEmbed('⛽ Tankolás bejegyzés', 0xf59e0b, [
+  if(kepFile) {
+    const form = new FormData();
+    form.append('file', kepFile);
+    form.append('webhook', WH.tankolas);
+    form.append('title', `⛽ Tankolás – ${rsz}`);
+    form.append('description',
+      `👷 **${user?.username}** | 📅 ${datum} | 🚗 ${rsz} | ${liter}L | ${osszeg}Ft | ⛽ ${allomas||'—'} | ${megj||'—'}`
+    );
+    try {
+      await fetch(WORKER + '/upload/image', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: form
+      });
+    } catch(e) { console.warn('Kép feltöltés hiba:', e); }
+  } else {
+    await sendWebhook(WH.tankolas, buildEmbed('⛽ Tankolás bejegyzés', 0xf59e0b, [
       ['Dolgozó',      user?.username || '—'],
       ['Dátum',        datum],
       ['Rendszám',     rsz],
@@ -703,16 +718,16 @@ async function postTankolas() {
       ['Összeg',       osszeg + ' Ft'],
       ['Töltőállomás', allomas || '—'],
       ['Megjegyzés',   megj || '—']
-    ])
-  );
+    ]));
+  }
 
   const item = {
     datum,
-    rendszam:        rsz,
-    liter:           liter + ' L',
-    'összeg':        osszeg + ' Ft',
-    'töltőállomás':  allomas || '—',
-    'megjegyzés':    megj || '—',
+    rendszam:       rsz,
+    liter:          liter + ' L',
+    'összeg':       osszeg + ' Ft',
+    'töltőállomás': allomas || '—',
+    'megjegyzés':   megj || '—',
     rogzitveKor: now(),
     userId: user?.id
   };
@@ -725,7 +740,6 @@ async function postTankolas() {
   showMsg('tankMsg','ok','✅ Tankolás rögzítve!');
   renderNaplo('tankList', LS.tankolas);
 }
-
 async function postTarolo() {
   const datum  = val('taroDatum');
   const azon   = val('taroAzon');
