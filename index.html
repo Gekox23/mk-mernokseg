@@ -293,17 +293,21 @@
   }
 
   function renderUser(){
-    if(!currentUser)return;
-    const bar=document.getElementById('userBar');
-    const avatar=currentUser.avatar?`<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="">`:''; 
-    const adminBtn=(currentUser.isAdmin||currentUser.isSupervisor)?`<a href="/mk-mernokseg/admin" class="admin-btn">${currentUser.isAdmin?'🔧 Admin':'👤 Supervisor'}</a>`:""; 
-    bar.innerHTML=`${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin?'<span class="admin-badge">ADMIN</span>':currentUser.isSupervisor?'<span class="admin-badge" style="background:#3b82f6">SV</span>':''}<button class="logout-btn" onclick="logout()">Kilépés</button>${adminBtn}`;
-    document.getElementById('loginButtons').style.display='none';
-    document.getElementById('welcomeBox').style.display='block';
-    document.getElementById('welcomeName').textContent=currentUser.username;
-    if(currentUser.isAdmin)document.getElementById('adminTag').style.display='inline';
-    document.getElementById('jelentkezesContent').innerHTML=`<div class="card"><div class="card-body"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Válassz egy eseményt fenn a listából és kattints a Jelentkezem gombra.</p></div></div>`;
-  }
+  if(!currentUser)return;
+  const bar=document.getElementById('userBar');
+  const avatar=currentUser.avatar?`<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="">`:'';
+  const adminBtn = currentUser.isAdmin || currentUser.isSupervisor
+    ? `<a href="/mk-mernokseg/admin" class="admin-btn">${currentUser.isAdmin ? '🔧 Admin' : '👤 Supervisor'}</a>`
+    : currentUser.isWorker
+      ? `<a href="/mk-mernokseg/dolgozo" class="admin-btn" style="background:#1a3a5c;border:1px solid #2b4668;color:#60a5fa">👷 Dolgozói panel</a>`
+      : "";
+  bar.innerHTML=`${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin?'<span class="admin-badge">ADMIN</span>':currentUser.isSupervisor?'<span class="admin-badge" style="background:#3b82f6">SV</span>':currentUser.isWorker?'<span class="admin-badge" style="background:#1a3a5c;color:#60a5fa;border:1px solid #2b4668">DOLGOZÓ</span>':''}<button class="logout-btn" onclick="logout()">Kilépés</button>${adminBtn}`;
+  document.getElementById('loginButtons').style.display='none';
+  document.getElementById('welcomeBox').style.display='block';
+  document.getElementById('welcomeName').textContent=currentUser.username;
+  if(currentUser.isAdmin)document.getElementById('adminTag').style.display='inline';
+  document.getElementById('jelentkezesContent').innerHTML=`<div class="card"><div class="card-body"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Válassz egy eseményt fenn a listából és kattints a Jelentkezem gombra.</p></div></div>`;
+}
 
   async function loadTodayEvents(){
     const list=document.getElementById('eventList');
