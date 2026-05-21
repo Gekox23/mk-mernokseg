@@ -7,8 +7,22 @@
   <link rel="icon" type="image/png" href="assets/sarokLogo.png">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;line-height:1.6}
+    /* ── Loading screen ── */
+    #loader{position:fixed;inset:0;background:#0f1826;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s ease}
+    #loader.hide{opacity:0;pointer-events:none}
+    .loader-inner{display:flex;flex-direction:column;align-items:center;gap:16px}
+    .loader-logo{width:72px;height:72px;animation:pulse 1.2s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:.4;transform:scale(.95)}50%{opacity:1;transform:scale(1.05)}}
+    .loader-bar{width:200px;height:3px;background:#1a2c42;border-radius:999px;overflow:hidden}
+    .loader-bar-inner{height:100%;width:0;background:#ef7a14;border-radius:999px;animation:bar 1.4s ease forwards}
+    @keyframes bar{to{width:100%}}
+    /* ── Page fade-in ── */
+    body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;line-height:1.6;opacity:0;transition:opacity .4s ease}
+    body.loaded{opacity:1}
     a{color:#ef7a14;text-decoration:none}
+    /* ── Scroll-reveal ── */
+    .reveal{opacity:0;transform:translateY(28px);transition:opacity .55s ease,transform .55s ease}
+    .reveal.visible{opacity:1;transform:none}
     header{background:#121d2e;border-bottom:1px solid #243347;padding:16px 32px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
     .brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700}
     .brand img{height:36px;width:auto}
@@ -28,7 +42,7 @@
     .btn-discord{background:#5865F2;color:#fff}
     .hero-img{border-radius:20px;overflow:hidden;height:320px;display:flex;align-items:center;justify-content:center}
     .hero-img img{width:100%;height:100%;object-fit:cover;border-radius:20px}
-    .section{max-width:1100px;margin:48px auto;padding:0 24px}
+    .section{max-width:1100px;margin:56px auto;padding:0 24px}
     .section h2{font-size:22px;margin-bottom:18px;color:#ef7a14}
     .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
     .card{background:#162233;border:1px solid #243347;border-radius:16px;overflow:hidden}
@@ -74,20 +88,28 @@
   </style>
 </head>
 <body>
+<!-- Loading screen -->
+<div id="loader">
+  <div class="loader-inner">
+    <img src="assets/sarokLogo.png" class="loader-logo" alt="">
+    <div class="loader-bar"><div class="loader-bar-inner"></div></div>
+  </div>
+</div>
+
 <header>
   <div class="brand">
     <img src="assets/sarokLogo.png" alt="MK logo">
     Mezőkovácsházi <span>&nbsp;Mérnökség</span>
   </div>
   <nav>
-    <a href="#napik">Események</a>
-    <a href="#rolunk">Rólunk</a>
-    <a href="#jelentkezes">Jelentkezés</a>
+    <a href="#napik" onclick="smoothTo(event,'napik')">Események</a>
+    <a href="#rolunk" onclick="smoothTo(event,'rolunk')">Rólunk</a>
+    <a href="#jelentkezes" onclick="smoothTo(event,'jelentkezes')">Jelentkezés</a>
   </nav>
   <div class="user-bar" id="userBar"></div>
 </header>
 
-<section class="hero">
+<section class="hero reveal">
   <div>
     <div style="display:inline-block;background:#2c1e0e;color:#ffb86c;padding:5px 12px;border-radius:999px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px">Mezőkovácsháza</div>
     <h1>Mezőkovácsházi<br><span>Mérnökség</span></h1>
@@ -105,15 +127,15 @@
   </div>
 </section>
 
-<section class="section" id="napik">
+<section class="section reveal" id="napik">
   <h2>📅 Mai események</h2>
   <div class="event-list" id="eventList"><p class="empty-events">Betöltés...</p></div>
 </section>
 
-<section class="section" id="rolunk">
+<section class="section reveal" id="rolunk">
   <h2>Rólunk</h2>
   <div class="cards">
-    <div class="card card-link" onclick="document.getElementById('csapatmunka-szekció').scrollIntoView({behavior:'smooth'})"> 
+    <div class="card card-link" onclick="document.getElementById('csapatmunka-szekció').scrollIntoView({behavior:'smooth'})">
       <img class="card-img" src="assets/csapatmunka.png" alt="Csapatmunka">
       <div class="card-body">
         <h3>Csapatmunka</h3>
@@ -127,24 +149,24 @@
         <p>Belső oktatások és rendszeres toborzási napok – folyamatosan fejlődünk és bővítjük a csapatot.</p>
       </div>
     </div>
-    <div class="card card-link" onclick="window.location.href='chat.html'">
+    <div class="card card-link" onclick="window.location.href='/mk-mernokseg/chat'">
       <img class="card-img" src="assets/Utinfo.png" alt="Segítség / Chat">
       <div class="card-body">
         <h3>💬 Segítség / Chat</h3>
-        <p>Kérdésed van? Írj nekünk a chat felületen – AI asszisztensünk azonnal válaszol, supervisor is elérhető.</p>
+        <p>Kérdésed van? Írj nekünk – AI asszisztensünk azonnal válaszol, supervisor is elérhető ticketen.</p>
       </div>
     </div>
   </div>
 
   <!-- CSAPATMUNKA szekció -->
-  <h2 id="csapatmunka-szekció" style="margin-top:56px;scroll-margin-top:80px">🚧 Csapatmunka</h2>
-  <div class="highlight-bar">
+  <h2 id="csapatmunka-szekció" class="reveal" style="margin-top:56px;scroll-margin-top:80px">🚧 Csapatmunka</h2>
+  <div class="highlight-bar reveal">
     <p>A Mezőkovácsházi Mérnökség feladata az útviszonyok biztonságos fenntartása. Csapatértékünk az összehangolt munka: minden tag tudja a feladatát, és mindenki számíthat a másikra.</p>
   </div>
-  <div class="info-grid">
+  <div class="info-grid reveal">
     <div class="info-box">
       <h3>🛣️ Útlezárás és forgalomterelés</h3>
-      <p>Amikor egy útszakasz lezárásra kerül, csapatáltalánosan koordináljuk a forgalmat. A lezárás időtartama, helyszíne és a kerülőút mindig megtalálható az eseménynáptárban.</p>
+      <p>Amikor egy útszakasz lezárásra kerül, csapatáltalánosan koordináljuk a forgalmat. A lezárás időtartama, helyszíne és a kerülőút mindig megtalálható az eseménynaptárban.</p>
       <ul>
         <li>Előre meghirdetett lezárások</li>
         <li>Valós idejű útinfo az oldalon</li>
@@ -153,7 +175,7 @@
     </div>
     <div class="info-box">
       <h3>🔧 Burkolatjavítás és karbantartás</h3>
-      <p>Az úthibák javítása számos tagot érint egyszerre. Gépészeti csapat, forgalomirlányítók és supervisorok együttműködve végzik a munkaterv szerinti feladatokat.</p>
+      <p>Az úthibák javítása számos tagot érint egyszerre. Gépészeti csapat, forgalomirányítók és supervisorok együttműködve végzik a munkaterv szerinti feladatokat.</p>
       <ul>
         <li>Munkagépek koordinált alkalmazása</li>
         <li>Supervisor által irányított körzetmunka</li>
@@ -163,11 +185,11 @@
   </div>
 
   <!-- SZAKTUDÁS szekció -->
-  <h2 id="szaktudas-szekció" style="margin-top:56px;scroll-margin-top:80px">🎓 Szaktudás és fejlődés</h2>
-  <div class="highlight-bar">
-    <p>Nem elégénk meg az alapszinttel. A Mérnökség belső oktatási rendszerével minden tag lehetőséget kap arra, hogy mélyítse tudását – akár a gépek kezelésében, akár a forgalomszervezésben vagy a supervisori feladatokban.</p>
+  <h2 id="szaktudas-szekció" class="reveal" style="margin-top:56px;scroll-margin-top:80px">🎓 Szaktudás és fejlődés</h2>
+  <div class="highlight-bar reveal">
+    <p>Nem elégedünk meg az alapszinttel. A Mérnökség belső oktatási rendszerével minden tag lehetőséget kap arra, hogy mélyítse tudását – akár a gépek kezelésében, akár a forgalomszervezésben vagy a supervisori feladatokban.</p>
   </div>
-  <div class="step-row">
+  <div class="step-row reveal">
     <div class="step-box">
       <div class="step-num">01</div>
       <h4>Toborzás</h4>
@@ -184,19 +206,19 @@
       <p>A legaktívabb tagok supervisor képzésen vehetnek részt és irányító szerepet tölthetnek be.</p>
     </div>
   </div>
-  <div class="info-grid" style="margin-top:18px">
+  <div class="info-grid reveal" style="margin-top:18px">
     <div class="info-box">
       <h3>📚 Belső oktatási rendszer</h3>
       <p>A supervisorok rendszeresen tartanak oktatásokat kis csoportokban. Az oktatás időpontja előre meghirdetett, rá foglalással lehet jelentkezni ezen az oldalon.</p>
       <ul>
-        <li>Práktikus, pályán belüli feladatok</li>
+        <li>Praktikus, pályán belüli feladatok</li>
         <li>Elméleti háttér és szabályzat</li>
         <li>Vizsgával záruló haladó modulok</li>
       </ul>
     </div>
     <div class="info-box">
       <h3>🏅 Elismerés és előrelépés</h3>
-      <p>Aktív részvétel és jó teljesítmény alapján tagjaink előreléphetenek. Az előrelépés átlátható feltételekhez kötött, nem szubjektív döntés eredménye.</p>
+      <p>Aktív részvétel és jó teljesítmény alapján tagjaink előreléphetnek. Az előrelépés átlátható feltételekhez kötött, nem szubjektív döntés eredménye.</p>
       <ul>
         <li>Jelenléti és aktivitási pontrendszer</li>
         <li>Supervisor javaslat alapján</li>
@@ -206,17 +228,17 @@
   </div>
 </section>
 
-<section class="section" id="jelentkezes">
+<section class="section reveal" id="jelentkezes">
   <h2>Jelentkezés</h2>
   <div id="jelentkezesContent">
     <div class="login-box">
-      <p>Az időpontfoglaláshoz kérjük lépj be Discord fiókoddal.</p>
+      <p>Jelentkezéshez lépj be Discord fiókoddal!</p>
       <a href="#" id="discordLoginBtn2" class="btn btn-discord">👤 Belépés Discorddal</a>
     </div>
   </div>
 </section>
 
-<div class="chat-float"><a href="chat.html">💬 Segítség</a></div>
+<div class="chat-float"><a href="/mk-mernokseg/chat">💬 Segítség</a></div>
 
 <footer>
   <div style="display:flex;align-items:center;gap:10px">
@@ -224,82 +246,88 @@
     <span>Mezőkovácsházi Mérnökség &copy; 2026</span>
   </div>
   <div>
-    <a href="terms.html">Felhasználási feltételek</a>
-    <a href="privacy.html">Adatvédelmi tájékoztató</a>
+    <a href="/mk-mernokseg/aszf">Felhasználási feltételek</a>
+    <a href="/mk-mernokseg/adatvedelem">Adatvédelmi tájékoztató</a>
   </div>
 </footer>
 
 <script>
-  const WORKER_URL = 'https://mk.gekox1111.workers.dev';
-  const DISCORD_CLIENT_ID = '1506719802390085778';
-  const REDIRECT_URI = encodeURIComponent('https://gekox23.github.io/mk-mernokseg/callback.html');
-  const DISCORD_OAUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=email+identify`;
+  const WORKER_URL='https://mk.gekox1111.workers.dev';
+  const DISCORD_CLIENT_ID='1506719802390085778';
+  const REDIRECT_URI=encodeURIComponent('https://gekox23.github.io/mk-mernokseg/callback.html');
+  const DISCORD_OAUTH_URL=`https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=email+identify`;
+  let currentUser=null;
+  function getToken(){return localStorage.getItem('mk_token');}
+  function setToken(t){localStorage.setItem('mk_token',t);}
+  function clearToken(){localStorage.removeItem('mk_token');}
 
-  let currentUser = null;
-  function getToken() { return localStorage.getItem('mk_token'); }
-  function setToken(t) { localStorage.setItem('mk_token', t); }
-  function clearToken() { localStorage.removeItem('mk_token'); }
+  // ── Smooth nav scroll ──
+  function smoothTo(e,id){e.preventDefault();const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth'});}
 
-  async function checkLogin() {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    if (token) { setToken(token); window.history.replaceState({}, '', window.location.pathname); }
-    const stored = getToken();
-    if (stored) {
-      try {
-        const res = await fetch(WORKER_URL + '/me', { headers: { Authorization: 'Bearer ' + stored } });
-        if (res.ok) { currentUser = await res.json(); renderUser(); }
+  // ── Scroll reveal ──
+  function initReveal(){
+    const els=document.querySelectorAll('.reveal');
+    const obs=new IntersectionObserver(entries=>{
+      entries.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');obs.unobserve(en.target);}});
+    },{threshold:.12});
+    els.forEach(el=>obs.observe(el));
+  }
+
+  async function checkLogin(){
+    const params=new URLSearchParams(window.location.search);
+    const token=params.get('token');
+    if(token){setToken(token);window.history.replaceState({},'',window.location.pathname);}
+    const stored=getToken();
+    if(stored){
+      try{
+        const res=await fetch(WORKER_URL+'/me',{headers:{Authorization:'Bearer '+stored}});
+        if(res.ok){currentUser=await res.json();renderUser();}
         else clearToken();
-      } catch(e) {}
+      }catch(e){}
     }
     loadTodayEvents();
+    // hide loader after login check
+    document.getElementById('loader').classList.add('hide');
+    document.body.classList.add('loaded');
+    setTimeout(initReveal,100);
   }
 
-  function renderUser() {
-    if (!currentUser) return;
-    const bar = document.getElementById('userBar');
-    const avatar = currentUser.avatar
-      ? `<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="">` : '';
-    const adminBtn = (currentUser.isAdmin || currentUser.isSupervisor)
-      ? `<a href="admin.html" class="admin-btn">${currentUser.isAdmin ? '🔧 Admin' : '👤 Supervisor'}</a>` : '';
-    bar.innerHTML = `${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin ? '<span class="admin-badge">ADMIN</span>' : currentUser.isSupervisor ? '<span class="admin-badge" style="background:#3b82f6">SV</span>' : ''}<button class="logout-btn" onclick="logout()">Kilépés</button>${adminBtn}`;
-    document.getElementById('loginButtons').style.display = 'none';
-    document.getElementById('welcomeBox').style.display = 'block';
-    document.getElementById('welcomeName').textContent = currentUser.username;
-    if (currentUser.isAdmin) document.getElementById('adminTag').style.display = 'inline';
-    document.getElementById('jelentkezesContent').innerHTML =
-      `<div class="card"><div class="card-body"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Válassz egy eseményt fenn a listából és kattints a Jelentkezem gombra.</p></div></div>`;
+  function renderUser(){
+    if(!currentUser)return;
+    const bar=document.getElementById('userBar');
+    const avatar=currentUser.avatar?`<img src="https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png" alt="">`:''; 
+    const adminBtn=(currentUser.isAdmin||currentUser.isSupervisor)?`<a href="/mk-mernokseg/admin" class="admin-btn">${currentUser.isAdmin?'🔧 Admin':'👤 Supervisor'}</a>`:""; 
+    bar.innerHTML=`${avatar}<span>${currentUser.username}</span>${currentUser.isAdmin?'<span class="admin-badge">ADMIN</span>':currentUser.isSupervisor?'<span class="admin-badge" style="background:#3b82f6">SV</span>':''}<button class="logout-btn" onclick="logout()">Kilépés</button>${adminBtn}`;
+    document.getElementById('loginButtons').style.display='none';
+    document.getElementById('welcomeBox').style.display='block';
+    document.getElementById('welcomeName').textContent=currentUser.username;
+    if(currentUser.isAdmin)document.getElementById('adminTag').style.display='inline';
+    document.getElementById('jelentkezesContent').innerHTML=`<div class="card"><div class="card-body"><h3>Időpontfoglalás</h3><p style="margin-top:8px;color:#7a94ad">Válassz egy eseményt fenn a listából és kattints a Jelentkezem gombra.</p></div></div>`;
   }
 
-  async function loadTodayEvents() {
-    const list = document.getElementById('eventList');
-    try {
-      const res = await fetch(WORKER_URL + '/events');
-      const events = await res.json();
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      const todayEnd = todayStart + 86400000;
-      const today = events.filter(e => e.start_time >= todayStart && e.start_time < todayEnd);
-      if (!today.length) { list.innerHTML = '<p class="empty-events">Ma nincsenek események. 🌟</p>'; return; }
-      list.innerHTML = today.map(e => {
-        const start = new Date(e.start_time).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Budapest' });
-        const end = new Date(e.end_time).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Budapest' });
-        const typeClass = `event-type-${e.type}`;
-        const bookBtn = currentUser && e.type !== 'lezaras'
-          ? `<a href="foglalas.html?event=${e.id}" class="book-btn">✅ Jelentkezem</a>` : '';
-        return `<div class="event-card ${typeClass}">
-          <div><h3>${e.title}</h3><p>${e.description || ''}</p></div>
-          <div class="event-meta"><div class="event-time">${start} – ${end}</div><br>${bookBtn}</div>
-        </div>`;
+  async function loadTodayEvents(){
+    const list=document.getElementById('eventList');
+    try{
+      const res=await fetch(WORKER_URL+'/events');
+      const events=await res.json();
+      const now=new Date();
+      const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+      const todayEnd=todayStart+86400000;
+      const today=events.filter(e=>e.start_time>=todayStart&&e.start_time<todayEnd);
+      if(!today.length){list.innerHTML='<p class="empty-events">Ma nincsenek események. 🌟</p>';return;}
+      list.innerHTML=today.map(e=>{
+        const start=new Date(e.start_time).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Budapest'});
+        const end=new Date(e.end_time).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Budapest'});
+        const typeClass=`event-type-${e.type}`;
+        const bookBtn=currentUser&&e.type!=='lezaras'?`<a href="/mk-mernokseg/foglalas?event=${e.id}" class="book-btn">✅ Jelentkezem</a>`:'';
+        return `<div class="event-card ${typeClass}"><div><h3>${e.title}</h3><p>${e.description||''}</p></div><div class="event-meta"><div class="event-time">${start} – ${end}</div><br>${bookBtn}</div></div>`;
       }).join('');
-    } catch(e) {
-      list.innerHTML = '<p class="empty-events">⚠️ Nem sikerült betölteni az eseményeket.</p>';
-    }
+    }catch(e){list.innerHTML='<p class="empty-events">⚠️ Nem sikerült betölteni az eseményeket.</p>';}
   }
 
-  function logout() { clearToken(); currentUser = null; location.reload(); }
-  document.getElementById('discordLoginBtn').href = DISCORD_OAUTH_URL;
-  document.getElementById('discordLoginBtn2').href = DISCORD_OAUTH_URL;
+  function logout(){clearToken();currentUser=null;location.reload();}
+  document.getElementById('discordLoginBtn').href=DISCORD_OAUTH_URL;
+  document.getElementById('discordLoginBtn2').href=DISCORD_OAUTH_URL;
   checkLogin();
 </script>
 </body>
