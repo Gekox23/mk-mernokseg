@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projektek – MK Mérnökség</title>
+  <link rel="icon" type="image/png" href="assets/sarokLogo.png">
+  <script>history.replaceState(null,'','/mk-mernokseg/projektek');</script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;background:#0f1826;color:#dce8f5;min-height:100vh}
+    header{background:#121d2e;border-bottom:1px solid #243347;padding:14px 28px;display:flex;justify-content:space-between;align-items:center}
+    .brand{font-size:17px;font-weight:700}.brand span{color:#ef7a14}
+    .hdr-right{display:flex;align-items:center;gap:10px}
+    .hdr-right a,.hdr-right button{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none}
+    .container{max-width:1100px;margin:32px auto;padding:0 20px}
+    h2{font-size:20px;color:#ef7a14;margin-bottom:20px}
+    .panel{background:#162233;border:1px solid #243347;border-radius:16px;padding:24px;margin-bottom:24px}
+    .panel h3{font-size:15px;margin-bottom:14px;color:#dce8f5}
+    label{display:block;font-size:13px;color:#8fa4bc;margin-bottom:4px;margin-top:10px}
+    input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #2b4668;background:#0f1826;color:#dce8f5;font-size:14px}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:#ef7a14}
+    textarea{resize:vertical;min-height:80px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    .btn{padding:11px 22px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer}
+    .btn-primary{background:#ef7a14;color:#fff;margin-top:14px;width:100%}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-sm{padding:5px 12px;border-radius:7px;border:none;font-size:12px;cursor:pointer;font-weight:700}
+    .btn-edit{background:#1a3a5c;color:#60a5fa}
+    .btn-del{background:#7f1d1d;color:#fca5a5}
+    .btn-green{background:#0d2b1e;color:#86efac}
+    .msg{border-radius:10px;padding:12px 16px;font-size:14px;margin-top:12px;display:none;line-height:1.5}
+    .msg-ok{background:#0d2b1e;border:1px solid #166534;color:#86efac}
+    .msg-err{background:#2c1215;border:1px solid #5c1a1a;color:#f87171}
+    .msg-loading{background:#1a2c42;border:1px solid #2b4668;color:#8fa4bc}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid #8fa4bc;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    /* PROJECT CARDS */
+    .projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+    .project-card{background:#162233;border:1px solid #243347;border-radius:14px;padding:20px;transition:.15s}
+    .project-card:hover{border-color:#2b4668}
+    .project-card.joined{border-color:#166534}
+    .pc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+    .pc-title{font-size:15px;font-weight:700;color:#dce8f5}
+    .pc-badge{padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+    .badge-active{background:#0d2b1e;color:#86efac}
+    .badge-closed{background:#1a2c42;color:#4a6580}
+    .badge-pending{background:#2c1e0e;color:#ffb86c}
+    .pc-desc{font-size:13px;color:#8fa4bc;margin-bottom:12px;line-height:1.5}
+    .pc-meta{font-size:11px;color:#4a6580;margin-bottom:12px}
+    .pc-meta span{margin-right:12px}
+    .pc-footer{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .pc-members{font-size:12px;color:#4a6580;margin-top:8px}
+    /* MEMBERS LIST */
+    .members-dropdown{display:none;background:#0a1220;border:1px solid #1a2c42;border-radius:8px;padding:10px;margin-top:8px}
+    .members-dropdown.open{display:block}
+    .member-item{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a2c42;font-size:12px}
+    .member-item:last-child{border-bottom:none}
+    /* NO ACCESS */
+    .no-access{display:flex;align-items:center;justify-content:center;height:80vh;flex-direction:column;gap:16px}
+    /* MODAL */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100}
+    .modal-bg.open{display:flex}
+    .modal{background:#162233;border:1px solid #243347;border-radius:16px;padding:28px;max-width:560px;width:95%;max-height:90vh;overflow-y:auto}
+    .modal h3{margin-bottom:16px;color:#ef7a14;font-size:16px}
+    .modal-close{float:right;background:none;border:none;color:#8fa4bc;font-size:18px;cursor:pointer;margin-top:-4px}
+    @media(max-width:600px){.row{grid-template-columns:1fr}.row3{grid-template-columns:1fr}.projects-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">MK <span>Projektek</span></div>
+  <div class="hdr-right">
+    <span id="userName" style="font-size:13px;color:#8fa4bc"></span>
+    <a href="/mk-mernokseg/dolgozo">← Dolgozói Panel</a>
+    <a href="/mk-mernokseg/">← Főoldal</a>
+    <button onclick="logout()">Kilépés</button>
+  </div>
+</header>
+
+<!-- CREATE MODAL (admin + supervisor) -->
+<div class="modal-bg" id="createModal">
+  <div class="modal">
+    <h3>📁 Új projekt létrehozása <button class="modal-close" onclick="closeModal('createModal')">&#10005;</button></h3>
+    <label>Projekt neve *</label><input type="text" id="pNev" placeholder="pl. Irodafelújítás 2026">
+    <label>Leírás *</label><textarea id="pLeiras" placeholder="Részletes leírás..."></textarea>
+    <div class="row">
+      <div><label>Kezdés dátuma</label><input type="date" id="pKezd"></div>
+      <div><label>Határidő</label><input type="date" id="pHatarideje"></div>
+    </div>
+    <label>Státusz</label>
+    <select id="pStatus">
+      <option value="aktiv">🟢 Aktív</option>
+      <option value="tervezett">🟡 Tervezett</option>
+      <option value="lezart">⚪ Lezárt</option>
+    </select>
+    <label>Prioritás</label>
+    <select id="pPrioritas">
+      <option value="magas">🔴 Magas</option>
+      <option value="kozepes">🟡 Közepes</option>
+      <option value="alacsony">🟢 Alacsony</option>
+    </select>
+    <label>Helyszín / Csoport</label><input type="text" id="pHelyszin" placeholder="pl. Budapest, 3. műhely">
+    <button class="btn btn-primary" id="createBtn" onclick="createProject()">🚀 Létrehozás</button>
+    <div class="msg" id="createMsg"></div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <h3>✏️ Projekt szerkesztése <button class="modal-close" onclick="closeModal('editModal')">&#10005;</button></h3>
+    <input type="hidden" id="eId">
+    <label>Projekt neve *</label><input type="text" id="eNev">
+    <label>Leírás *</label><textarea id="eLeiras"></textarea>
+    <div class="row">
+      <div><label>Kezdés</label><input type="date" id="eKezd"></div>
+      <div><label>Határidő</label><input type="date" id="eHatarideje"></div>
+    </div>
+    <label>Státusz</label>
+    <select id="eStatus">
+      <option value="aktiv">🟢 Aktív</option>
+      <option value="tervezett">🟡 Tervezett</option>
+      <option value="lezart">⚪ Lezárt</option>
+    </select>
+    <label>Prioritás</label>
+    <select id="ePrioritas">
+      <option value="magas">🔴 Magas</option>
+      <option value="kozepes">🟡 Közepes</option>
+      <option value="alacsony">🟢 Alacsony</option>
+    </select>
+    <label>Helyszín / Csoport</label><input type="text" id="eHelyszin">
+    <button class="btn btn-primary" onclick="submitEdit()">💾 Mentés</button>
+    <div class="msg" id="editMsg"></div>
+  </div>
+</div>
+
+<!-- FELADAT MODAL -->
+<div class="modal-bg" id="feladatModal">
+  <div class="modal">
+    <h3>✅ Feladat kiosztása <button class="modal-close" onclick="closeModal('feladatModal')">&#10005;</button></h3>
+    <input type="hidden" id="fProjId">
+    <label>Feladat neve *</label><input type="text" id="fNev" placeholder="pl. Villany szerelés">
+    <label>Leírás</label><textarea id="fLeiras" placeholder="Feladat részletei..."></textarea>
+    <label>Határidő</label><input type="date" id="fHatarideje">
+    <label>Hozzárendelés (Discord / Név)</label><input type="text" id="fDolgozo" placeholder="pl. Kovács János">
+    <label>Prioritás</label>
+    <select id="fPrioritas">
+      <option value="magas">🔴 Magas</option>
+      <option value="kozepes">🟡 Közepes</option>
+      <option value="alacsony">🟢 Alacsony</option>
+    </select>
+    <button class="btn btn-primary" onclick="submitFeladat()">✅ Feladat kiosztása</button>
+    <div class="msg" id="feladatMsg"></div>
+  </div>
+</div>
+
+<div class="container" id="mainContent">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <h2 style="margin-bottom:0">📁 Projektek</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <select id="filterStatus" onchange="renderProjects()" style="width:auto;padding:7px 12px">
+        <option value="">Minden státusz</option>
+        <option value="aktiv">Aktív</option>
+        <option value="tervezett">Tervezett</option>
+        <option value="lezart">Lezárt</option>
+      </select>
+      <button class="btn btn-primary" id="ujProjektBtn" style="margin-top:0;width:auto;display:none" onclick="openModal('createModal')">➕ Új projekt</button>
+    </div>
+  </div>
+  <div class="projects-grid" id="projectsGrid">
+    <div style="color:#4a6580;font-size:13px"><span class="spinner"></span> Betöltés...</div>
+  </div>
+</div>
+
+<div class="no-access" id="noAccess" style="display:none">
+  <h2>⛔ Nincs hozzáférésed</h2>
+  <p style="color:#8fa4bc">Be kell jelentkezned a projektek megtekintéséhez.</p>
+  <a href="/mk-mernokseg/" style="color:#ef7a14">Vissza a főoldalra</a>
+</div>
+
+<script>
+const WORKER = 'https://mk.gekox1111.workers.dev';
+const WH_PROJEKTEK = 'https://discord.com/api/webhooks/1506969179994194070/7pDAUSoDJx8hw5weMvE8yhpRIuxR0C2rGDtpejWayo7suTCy8RXLEcdJwUDmY0vIURbP';
+const WH_FELADATOK = 'https://discord.com/api/webhooks/1506968910208045196/5E11xop9yTyfwMNjNFLxPD-YsffXg55frVJ58fRrKS8HOxH_Po6EGoBPh7t3-FwjXWxP';
+const LS_KEY = 'mk_projektek';
+
+let token = localStorage.getItem('mk_token');
+let user = null;
+
+function showMsg(id,type,html){const el=document.getElementById(id);if(!el)return;el.className='msg '+(type==='ok'?'msg-ok':type==='loading'?'msg-loading':'msg-err');el.innerHTML=html;el.style.display='block';}
+function hideMsg(id){const el=document.getElementById(id);if(el)el.style.display='none';}
+function val(id){return document.getElementById(id)?.value?.trim()||'';}
+function now(){return new Date().toLocaleString('hu-HU',{timeZone:'Europe/Budapest'});}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+async function sendWebhook(url,payload){
+  try{await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});}catch(e){}
+}
+function buildEmbed(title,color,fields){
+  return{embeds:[{title,color,fields:fields.map(f=>({name:f[0],value:String(f[1]||'—'),inline:f[2]||false})),footer:{text:`${user?.username||'?'} • ${now()}`},timestamp:new Date().toISOString()}]};
+}
+
+// ── LOCAL STORAGE CRUD ──────────────────────────────────────────────────────
+function getProjects(){return JSON.parse(localStorage.getItem(LS_KEY)||'[]');}
+function saveProjects(arr){localStorage.setItem(LS_KEY,JSON.stringify(arr));}
+
+// ── RENDER PROJECTS ─────────────────────────────────────────────────────────
+function renderProjects(){
+  const grid = document.getElementById('projectsGrid');
+  let projects = getProjects();
+  const filterVal = val('filterStatus');
+  if(filterVal) projects = projects.filter(p => p.status === filterVal);
+  // Sort: active first, then pending, then closed
+  const order = {aktiv:0,tervezett:1,lezart:2};
+  projects.sort((a,b)=>(order[a.status]||9)-(order[b.status]||9));
+
+  if(!projects.length){
+    grid.innerHTML='<div style="color:#4a6580;font-size:13px;padding:20px">Nincsenek projektek'+( filterVal?' ebben a szűrőben':'')+'. '+(user?.isAdmin||user?.isSupervisor?'Hozz adj létre egyet!':'')+' </div>';
+    return;
+  }
+
+  const canManage = user?.isAdmin || user?.isSupervisor;
+  grid.innerHTML = projects.map((p,i)=>{
+    const joined = p.members?.includes(user?.id) || p.members?.includes(user?.username);
+    const statusBadge = p.status==='aktiv'?'badge-active':p.status==='tervezett'?'badge-pending':'badge-closed';
+    const statusLabel = p.status==='aktiv'?'🟢 Aktív':p.status==='tervezett'?'🟡 Tervezett':'⚪ Lezárt';
+    const prioIcon = p.prioritas==='magas'?'🔴':p.prioritas==='kozepes'?'🟡':'🟢';
+    const memberCount = p.members?.length || 0;
+    const origIdx = getProjects().findIndex(x=>x.id===p.id);
+
+    return `<div class="project-card ${joined?'joined':''}" id="pcard-${p.id}">
+      <div class="pc-header">
+        <div class="pc-title">${p.name}</div>
+        <span class="pc-badge ${statusBadge}">${statusLabel}</span>
+      </div>
+      <div class="pc-desc">${p.leiras||''}</div>
+      <div class="pc-meta">
+        ${p.helyszin?`<span>📍 ${p.helyszin}</span>`:''}
+        ${p.kezdes?`<span>📅 ${p.kezdes}</span>`:''}
+        ${p.hatarideje?`<span>⏰ Határidő: ${p.hatarideje}</span>`:''}
+        <span>${prioIcon} ${p.prioritas||'közepes'} prioritás</span>
+      </div>
+      <div class="pc-footer">
+        ${p.status!=='lezart' && !joined ? `<button class="btn-sm btn-green" onclick="joinProject('${p.id}',this)">➕ Feljelentkezés</button>` : ''}
+        ${joined ? `<span class="pc-badge badge-active">✅ Feljelentkezve</span>` : ''}
+        <button class="btn-sm" style="background:#1a2c42;color:#8fa4bc" onclick="toggleMembers('members-${p.id}')">👥 ${memberCount} tag</button>
+        ${canManage ? `
+          <button class="btn-sm btn-edit" onclick="openEditModal(${origIdx})">✏️ Szerk.</button>
+          <button class="btn-sm btn-primary" style="background:#1a3a5c;color:#93c5fd;margin-top:0;width:auto" onclick="openFeladatModal('${p.id}')">✅ Feladat</button>
+          <button class="btn-sm btn-del" onclick="deleteProject('${p.id}')">🗑️</button>
+        ` : ''}
+      </div>
+      <div class="members-dropdown" id="members-${p.id}">
+        ${(p.members||[]).length ? (p.members||[]).map(m=>`
+          <div class="member-item">
+            <span>👷 ${m}</span>
+            ${canManage?`<button class="btn-sm btn-del" style="padding:2px 7px" onclick="removeMember('${p.id}','${m}')">✕</button>`:''}
+          </div>`).join('') : '<div style="color:#4a6580;font-size:12px">Még nincs tag.</div>'}
+      </div>
+      ${p.feladatok?.length ? `
+        <div style="margin-top:10px;border-top:1px solid #1a2c42;padding-top:10px">
+          <div style="font-size:12px;color:#4a6580;margin-bottom:6px">✅ Feladatok (${p.feladatok.length}):</div>
+          ${p.feladatok.map(f=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #0f1826;display:flex;justify-content:space-between">
+            <span>${f.done?'✅':'⏳'} ${f.nev} ${f.dolgozo?'&rarr; '+f.dolgozo:''}</span>
+            ${canManage?`<button class="btn-sm" style="background:none;color:#86efac;padding:1px 6px;font-size:11px" onclick="toggleFeladatDone('${p.id}','${f.id}')">${f.done?'Visszavon':'Kész'}</button>`:''}
+          </div>`).join('')}
+        </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleMembers(id){document.getElementById(id)?.classList.toggle('open');}
+
+// ── CREATE PROJECT ──────────────────────────────────────────────────────────
+async function createProject(){
+  const nev=val('pNev'),leiras=val('pLeiras'),kezdes=val('pKezd'),hatarideje=val('pHatarideje'),status=val('pStatus'),prioritas=val('pPrioritas'),helyszin=val('pHelyszin');
+  if(!nev||!leiras){showMsg('createMsg','err','❌ Név és leírás kötelező!');return;}
+  document.getElementById('createBtn').disabled=true;
+  showMsg('createMsg','loading','<span class="spinner"></span> Létrehozás...');
+  const project={
+    id:'proj_'+Date.now(),
+    name:nev,leiras,kezdes,hatarideje,status,prioritas,helyszin,
+    letrehozta:user?.username,letrehozvaKor:now(),
+    members:[],feladatok:[]
+  };
+  const projects=getProjects();
+  projects.unshift(project);
+  saveProjects(projects);
+  await sendWebhook(WH_PROJEKTEK,buildEmbed('📁 Új projekt létrehozva: '+nev,0xef7a14,[
+    ['Leírás',leiras],['Státusz',status],['Prioritás',prioritas],
+    ['Kezdés',kezdes||'—'],['Határidő',hatarideje||'—'],['Helyszín',helyszin||'—'],
+    ['Létrehozta',user?.username]
+  ]));
+  ['pNev','pLeiras','pKezd','pHatarideje','pHelyszin'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('createBtn').disabled=false;
+  showMsg('createMsg','ok','✅ Projekt létrehozva!');
+  renderProjects();
+  setTimeout(()=>closeModal('createModal'),1200);
+}
+
+// ── EDIT PROJECT ────────────────────────────────────────────────────────────
+function openEditModal(idx){
+  const p=getProjects()[idx];
+  if(!p)return;
+  document.getElementById('eId').value=p.id;
+  document.getElementById('eNev').value=p.name;
+  document.getElementById('eLeiras').value=p.leiras||'';
+  document.getElementById('eKezd').value=p.kezdes||'';
+  document.getElementById('eHatarideje').value=p.hatarideje||'';
+  document.getElementById('eStatus').value=p.status||'aktiv';
+  document.getElementById('ePrioritas').value=p.prioritas||'kozepes';
+  document.getElementById('eHelyszin').value=p.helyszin||'';
+  hideMsg('editMsg');
+  openModal('editModal');
+}
+
+function submitEdit(){
+  const id=val('eId');
+  const projects=getProjects();
+  const idx=projects.findIndex(p=>p.id===id);
+  if(idx<0){showMsg('editMsg','err','❌ Nem található!');return;}
+  projects[idx]={...projects[idx],
+    name:val('eNev'),leiras:val('eLeiras'),kezdes:val('eKezd'),
+    hatarideje:val('eHatarideje'),status:val('eStatus'),
+    prioritas:val('ePrioritas'),helyszin:val('eHelyszin'),
+    modositvaKor:now()
+  };
+  saveProjects(projects);
+  showMsg('editMsg','ok','✅ Mentve!');
+  renderProjects();
+  setTimeout(()=>closeModal('editModal'),1000);
+}
+
+// ── DELETE PROJECT ──────────────────────────────────────────────────────────
+function deleteProject(id){
+  if(!confirm('Biztosan törlöd ezt a projektet?'))return;
+  const projects=getProjects().filter(p=>p.id!==id);
+  saveProjects(projects);
+  renderProjects();
+}
+
+// ── JOIN PROJECT ──────────────────────────────────────────────────────────────
+async function joinProject(id,btn){
+  btn.disabled=true;btn.textContent='...';
+  const projects=getProjects();
+  const idx=projects.findIndex(p=>p.id===id);
+  if(idx<0){btn.disabled=false;btn.textContent='➕ Feljelentkezés';return;}
+  const memberKey=user?.username||user?.id;
+  if(!projects[idx].members.includes(memberKey)){
+    projects[idx].members.push(memberKey);
+    saveProjects(projects);
+    await sendWebhook(WH_PROJEKTEK,buildEmbed('👋 Projekthez csatlakozás',0x22c55e,[
+      ['Projekt',projects[idx].name],['Dolgozó',user?.username]
+    ]));
+  }
+  renderProjects();
+}
+
+function removeMember(projectId,member){
+  if(!confirm(`Eltávolítod: ${member}?`))return;
+  const projects=getProjects();
+  const idx=projects.findIndex(p=>p.id===projectId);
+  if(idx<0)return;
+  projects[idx].members=projects[idx].members.filter(m=>m!==member);
+  saveProjects(projects);
+  renderProjects();
+}
+
+// ── FELADAT KIOSZTÁS ─────────────────────────────────────────────────────────
+function openFeladatModal(projectId){
+  document.getElementById('fProjId').value=projectId;
+  ['fNev','fLeiras','fHatarideje','fDolgozo'].forEach(id=>document.getElementById(id).value='');
+  hideMsg('feladatMsg');
+  openModal('feladatModal');
+}
+
+async function submitFeladat(){
+  const projId=val('fProjId'),nev=val('fNev'),leiras=val('fLeiras'),hatarideje=val('fHatarideje'),dolgozo=val('fDolgozo'),prioritas=val('fPrioritas');
+  if(!nev){showMsg('feladatMsg','err','❌ Feladat neve kötelező!');return;}
+  showMsg('feladatMsg','loading','<span class="spinner"></span> Kiosztás...');
+  const projects=getProjects();
+  const idx=projects.findIndex(p=>p.id===projId);
+  if(idx<0){showMsg('feladatMsg','err','❌ Projekt nem található!');return;}
+  const feladat={id:'f_'+Date.now(),nev,leiras,hatarideje,dolgozo,prioritas,done:false,letrehozva:now()};
+  if(!projects[idx].feladatok)projects[idx].feladatok=[];
+  projects[idx].feladatok.push(feladat);
+  saveProjects(projects);
+  await sendWebhook(WH_FELADATOK,buildEmbed('✅ Új feladat kiosztva',0x6366f1,[
+    ['Projekt',projects[idx].name],['Feladat',nev],['Leírás',leiras||'—'],
+    ['Hozzárendelve',dolgozo||'—'],['Határidő',hatarideje||'—'],['Prioritás',prioritas],
+    ['Kiosztotta',user?.username]
+  ]));
+  showMsg('feladatMsg','ok','✅ Feladat kiosztva!');
+  renderProjects();
+  setTimeout(()=>closeModal('feladatModal'),1200);
+}
+
+function toggleFeladatDone(projectId,feladatId){
+  const projects=getProjects();
+  const pi=projects.findIndex(p=>p.id===projectId);
+  if(pi<0)return;
+  const fi=projects[pi].feladatok?.findIndex(f=>f.id===feladatId);
+  if(fi===undefined||fi<0)return;
+  projects[pi].feladatok[fi].done=!projects[pi].feladatok[fi].done;
+  saveProjects(projects);
+  renderProjects();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+async function init(){
+  if(!token){
+    document.getElementById('noAccess').style.display='flex';
+    document.getElementById('mainContent').style.display='none';
+    return;
+  }
+  try{
+    const res=await fetch(WORKER+'/me',{headers:{Authorization:'Bearer '+token}});
+    if(!res.ok)throw new Error();
+    user=await res.json();
+  }catch(e){
+    document.getElementById('noAccess').style.display='flex';
+    document.getElementById('mainContent').style.display='none';
+    return;
+  }
+
+  if(!user.isAdmin && !user.isSupervisor && !user.isWorker){
+    document.getElementById('noAccess').style.display='flex';
+    document.getElementById('mainContent').style.display='none';
+    return;
+  }
+
+  const roleLabel = user.isAdmin ? '🔒 Admin' : user.isSupervisor ? '👤 Supervisor' : '👷 Dolgozó';
+  document.getElementById('userName').textContent = roleLabel + ': ' + user.username;
+
+  // Admin és supervisor látja az Új projekt gombot
+  if(user.isAdmin || user.isSupervisor){
+    document.getElementById('ujProjektBtn').style.display='inline-block';
+  }
+
+  renderProjects();
+}
+
+function logout(){localStorage.removeItem('mk_token');window.location.href='/mk-mernokseg/';}
+
+init();
+</script>
+</body>
+</html>
