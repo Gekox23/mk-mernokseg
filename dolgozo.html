@@ -148,6 +148,11 @@
         <label>Projekt neve *</label><input type="text" id="projNev" placeholder="pl. Útlezárás – Május">
         <label>Leírás *</label><textarea id="projLeiras" placeholder="Projekt részletei..."></textarea>
         <label>Határidő</label><input type="date" id="projHatarido">
+        <label>Projekt kép (opcionális)</label>
+        <label class="file-label" for="projKep">📷 Kép feltöltése
+        <input type="file" id="projKep" accept="image/*" onchange="previewImg(this,'projKepPreview')">
+        </label>
+        <img id="projKepPreview" class="img-preview">
         <button class="btn btn-primary" onclick="createProjekt()">📁 Projekt létrehozása</button>
         <div class="msg" id="projCreateMsg"></div>
       </div>
@@ -956,6 +961,22 @@ async function createProjekt() {
       body: JSON.stringify({ name: nev, description: leiras, deadline: hatarido })
     });
     if(!res.ok) throw new Error();
+    let imageUrl = null;
+    const kepFile = document.getElementById('projKep')?.files?.[0];
+    if(kepFile) {
+    const form = new FormData();
+    form.append('file', kepFile);
+    form.append('webhook', WH.projektek);
+    form.append('title', `📁 Új projekt: ${nev}`);
+    form.append('description', `👷 **${user?.username}** | ${leiras}`);
+  try {
+    await fetch(WORKER + '/upload/image', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: form
+    });
+  } catch(e) { console.warn('Kép hiba:', e); }
+}
     await sendWebhook(WH.projektek, buildEmbed('📁 Új projekt létrehozva: '+nev, 0xef7a14, [
       ['Létrehozta', user?.username],
       ['Leírás',     leiras],
@@ -1058,13 +1079,14 @@ async function deleteProjekt(projectId) {
     }
   } catch(e) {}
 }
+
+
+  
 async function loadProjektek() {
   const container = document.getElementById('projektekList');
   container.innerHTML = '<div style="color:#4a6580;font-size:13px"><span class="spinner"></span> Betöltés...</div>';
   try {
-    const res = await fetch(WORKER + '/projektek', {
-      headers: { Authorization: 'Bearer ' + token }
-    });
+    const res = await fetch(WORKER + '/projektek', { headers: { Authorization: 'Bearer ' + token } });
     if(!res.ok) throw new Error();
     const data = await res.json();
     if(!data.length) {
@@ -1073,25 +1095,28 @@ async function loadProjektek() {
     }
     container.innerHTML = data.map(p => {
       const isOwner = user?.isAdmin || p.created_by === user?.id;
+      let joinBtn = '';
+      if(p.joined) {
+        joinBtn = '<span class="badge badge-ok">✅ Tag vagy</span>';
+      } else if(p.pending) {
+        joinBtn = '<span class="badge badge-warn">⏳ Kérelem elküldve</span>';
+      } else {
+        joinBtn = `<button class="btn-sm btn-edit" onclick="feljelentkezik('${p.id}','${p.name.replace(/'/g,"\\'")}',this)">➕ Feljelentkezés</button>`;
+      }
       return `
         <div class="proj-card" id="proj-${p.id}">
+          ${p.image_url ? `<img src="${p.image_url}" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:10px">` : ''}
           <div class="proj-title">${p.name}</div>
-          <div class="proj-meta">
-            Létrehozta: ${p.creator_name || '—'} •
-            Határidő: ${p.deadline || '—'}
-          </div>
-          <div class="proj-desc">${p.description || ''}</div>
+          <div class="proj-meta">Létrehozta: ${p.creator_name||'—'} • Határidő: ${p.deadline||'—'}</div>
+          <div class="proj-desc">${p.description||''}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-            ${p.joined
-              ? '<span class="badge badge-ok">✅ Feljelentkezve</span>'
-              : `<button class="btn-sm btn-edit" onclick="feljelentkezik('${p.id}',this)">➕ Feljelentkezés</button>`
-            }
+            ${joinBtn}
             ${isOwner ? `<button class="btn-sm btn-green" onclick="toggleTagok('${p.id}')">👥 Tagok kezelése</button>` : ''}
+            ${isOwner ? `<button class="btn-sm" style="background:#1a2c42;color:#8fa4bc" onclick="togglePending('${p.id}')">📋 Kérelmek</button>` : ''}
             ${user?.isAdmin ? `<button class="btn-sm btn-del" onclick="deleteProjekt('${p.id}')">🗑️ Töröl</button>` : ''}
           </div>
-          <div id="tagok-${p.id}" style="display:none;margin-top:14px">
-            <div style="font-size:12px;color:#4a6580;margin-bottom:8px">Betöltés...</div>
-          </div>
+          <div id="tagok-${p.id}" style="display:none;margin-top:14px"></div>
+          <div id="pending-${p.id}" style="display:none;margin-top:14px"></div>
         </div>`;
     }).join('');
   } catch(e) {
@@ -1099,7 +1124,7 @@ async function loadProjektek() {
   }
 }
 
-async function feljelentkezik(projectId, btn) {
+async function feljelentkezik(projectId, projectName, btn) {
   btn.disabled = true; btn.textContent = '...';
   try {
     const res = await fetch(WORKER + '/projektek/join', {
@@ -1107,14 +1132,20 @@ async function feljelentkezik(projectId, btn) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ project_id: projectId })
     });
+    const data = await res.json();
     if(res.ok) {
-      btn.outerHTML = '<span class="badge badge-ok">✅ Feljelentkezve</span>';
-      await sendWebhook(WH.projektek, buildEmbed('📁 Projekthez csatlakozás', 0xef7a14, [
-        ['Dolgozó',    user?.username],
-        ['Projekt ID', projectId]
-      ]));
+      btn.outerHTML = '<span class="badge badge-warn">⏳ Kérelem elküldve</span>';
+      await sendWebhook(
+        'https://discord.com/api/webhooks/1506969412643717210/-ILvEaKX6heAf_EH8MuROOGv5UAOT4IK8uicIMejp3zgXFjRijDFq6fkCXKhxBuyStM9',
+        buildEmbed('📋 Projekt csatlakozási kérelem', 0xf59e0b, [
+          ['Dolgozó',  user?.username],
+          ['Projekt',  projectName],
+          ['Státusz',  '⏳ Várólistán']
+        ])
+      );
     } else {
       btn.disabled = false; btn.textContent = '➕ Feljelentkezés';
+      alert('❌ ' + (data.error || 'Hiba'));
     }
   } catch(e) { btn.disabled = false; btn.textContent = '➕ Feljelentkezés'; }
 }
@@ -1139,6 +1170,56 @@ async function loadFeladatok() {
   } catch(e) {
     container.innerHTML = '<div style="color:#4a6580;font-size:13px">Feladatok nem elérhetők.</div>';
   }
+}
+
+async function togglePending(projectId) {
+  const box = document.getElementById('pending-' + projectId);
+  if(box.style.display === 'block') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div style="font-size:12px;color:#4a6580">Betöltés...</div>';
+  try {
+    const res = await fetch(WORKER + '/projektek/join/pending?id=' + projectId, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+    if(!data.length) {
+      box.innerHTML = '<div style="font-size:12px;color:#4a6580">Nincs függőben lévő kérelem.</div>';
+      return;
+    }
+    box.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#dce8f5;margin-bottom:8px">📋 Csatlakozási kérelmek</div>
+      ${data.map(r => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a2c42">
+          <span style="font-size:13px;color:#dce8f5">👷 ${r.username}</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn-sm btn-green" onclick="acceptJoin(${r.id},'${projectId}',this)">✅ Elfogad</button>
+            <button class="btn-sm btn-del"   onclick="rejectJoin(${r.id},'${projectId}',this)">❌ Elutasít</button>
+          </div>
+        </div>
+      `).join('')}`;
+  } catch(e) {
+    box.innerHTML = '<div style="font-size:12px;color:#f87171">Hiba a kérelmek betöltésekor.</div>';
+  }
+}
+
+async function acceptJoin(requestId, projectId, btn) {
+  btn.disabled = true;
+  const res = await fetch(WORKER + '/projektek/join/accept', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ request_id: requestId })
+  });
+  if(res.ok) togglePending(projectId);
+}
+
+async function rejectJoin(requestId, projectId, btn) {
+  btn.disabled = true;
+  const res = await fetch(WORKER + '/projektek/join/reject', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ request_id: requestId })
+  });
+  if(res.ok) togglePending(projectId);
 }
 
 // ── RECENT ACTIVITY ───────────────────────────────────────────────────────
