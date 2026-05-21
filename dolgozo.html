@@ -682,64 +682,111 @@ async function postTankolas() {
   const osszeg  = val('tankOsszeg');
   const allomas = val('tankAllomas');
   const megj    = val('tankMegjegyzes');
+  const kepFile = document.getElementById('tankKep')?.files?.[0];
+
   if(!datum || !rsz || !liter || !osszeg) {
     showMsg('tankMsg','err','❌ Kötelező mezők hiányoznak!'); return;
   }
   showMsg('tankMsg','loading','<span class="spinner"></span> Rögzítés...');
+
+  // Ha van kép → feltöltjük a workeren át Discordra
+  if(kepFile) {
+    const form = new FormData();
+    form.append('file', kepFile);
+    form.append('webhook', WH.tankolas);
+    form.append('title', `⛽ Tankolás – ${rsz}`);
+    form.append('description',
+      `👷 **${user?.username}** | 📅 ${datum} | ⛽ ${liter}L | 💰 ${osszeg} Ft | 📍 ${allomas||'—'}`
+    );
+    try {
+      await fetch(WORKER + '/upload/image', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: form
+      });
+    } catch(e) { console.warn('Kép feltöltés hiba:', e); }
+  }
+
+  // Szöveges webhook (kép nélkül vagy kép mellé)
   const item = {
-    datum,
-    rendszam: rsz,
-    liter,
+    datum, rendszam: rsz, liter,
     'összeg': osszeg + ' Ft',
     'töltőállomás': allomas || '—',
     'megjegyzés': megj || '—',
-    rogzitveKor: now(),
-    userId: user?.id
+    rogzitveKor: now(), userId: user?.id
   };
   saveFeedItem(LS.tankolas, item);
-  await sendWebhook(WH.tankolas, buildEmbed('⛽ Tankolás bejegyzés', 0xf59e0b, [
-    ['Dolgozó',   user?.username],
-    ['Dátum',     datum],
-    ['Rendszám',  rsz],
-    ['Liter',     liter + ' L'],
-    ['Összeg',    osszeg + ' Ft'],
-    ['Állomás',   allomas || '—'],
-    ['Megjegyzés',megj || '—']
-  ]));
+
+  if(!kepFile) {
+    await sendWebhook(WH.tankolas, buildEmbed('⛽ Tankolás bejegyzés', 0xf59e0b, [
+      ['Dolgozó',   user?.username],
+      ['Dátum',     datum],
+      ['Rendszám',  rsz],
+      ['Liter',     liter + ' L'],
+      ['Összeg',    osszeg + ' Ft'],
+      ['Állomás',   allomas || '—'],
+      ['Megjegyzés',megj || '—']
+    ]));
+  }
+
   ['tankDatum','tankRendszam','tankLiter','tankOsszeg','tankAllomas','tankMegjegyzes']
     .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('tankKep').value = '';
   document.getElementById('tankPreview').style.display = 'none';
   showMsg('tankMsg','ok','✅ Tankolás rögzítve!');
   renderNaplo('tankList', LS.tankolas);
 }
 
-// ── POST TÁROLÓ ───────────────────────────────────────────────────────────
 async function postTarolo() {
   const datum  = val('taroDatum');
   const azon   = val('taroAzon');
   const muv    = val('taroMuvelet');
   const leiras = val('taroLeiras');
+  const kepFile = document.getElementById('taroKep')?.files?.[0];
+
   if(!datum || !leiras) {
     showMsg('taroMsg','err','❌ Dátum és leírás kötelező!'); return;
   }
   showMsg('taroMsg','loading','<span class="spinner"></span> Rögzítés...');
+
+  if(kepFile) {
+    const form = new FormData();
+    form.append('file', kepFile);
+    form.append('webhook', WH.tarolo);
+    form.append('title', `🏪 Tároló – ${muv}`);
+    form.append('description',
+      `👷 **${user?.username}** | 📅 ${datum} | 🏷️ ${azon||'—'} | ${leiras}`
+    );
+    try {
+      await fetch(WORKER + '/upload/image', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: form
+      });
+    } catch(e) { console.warn('Kép feltöltés hiba:', e); }
+  }
+
   const item = {
     datum,
     'azonosító': azon || '—',
     'művelet': muv,
     'leírás': leiras,
-    rogzitveKor: now(),
-    userId: user?.id
+    rogzitveKor: now(), userId: user?.id
   };
   saveFeedItem(LS.tarolo, item);
-  await sendWebhook(WH.tarolo, buildEmbed('🏪 Tároló napló', 0x06b6d4, [
-    ['Dolgozó',  user?.username],
-    ['Dátum',    datum],
-    ['Tároló',   azon || '—'],
-    ['Művelet',  muv],
-    ['Leírás',   leiras]
-  ]));
+
+  if(!kepFile) {
+    await sendWebhook(WH.tarolo, buildEmbed('🏪 Tároló napló', 0x06b6d4, [
+      ['Dolgozó', user?.username],
+      ['Dátum',   datum],
+      ['Tároló',  azon || '—'],
+      ['Művelet', muv],
+      ['Leírás',  leiras]
+    ]));
+  }
+
   ['taroDatum','taroAzon','taroLeiras'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('taroKep').value = '';
   document.getElementById('taroPreview').style.display = 'none';
   showMsg('taroMsg','ok','✅ Tároló bejegyzés rögzítve!');
   renderNaplo('taroList', LS.tarolo);
@@ -878,18 +925,41 @@ function deletePaly(idx) {
   renderPalyazatok();
 }
 
-// ── POST JELENTÉS ─────────────────────────────────────────────────────────
 async function postJelentes() {
   const cim    = val('jelCim');
   const leiras = val('jelLeiras');
-  if(!cim || !leiras) { showMsg('jelMsg','err','❌ Cím és leírás kötelező!'); return; }
+  const kepFile = document.getElementById('jelKep')?.files?.[0];
+
+  if(!cim || !leiras) {
+    showMsg('jelMsg','err','❌ Cím és leírás kötelező!'); return;
+  }
   showMsg('jelMsg','loading','<span class="spinner"></span> Küldés...');
-  await sendWebhook(WH.jelentes, buildEmbed('📊 Új jelentés: '+cim, 0x6366f1, [
-    ['Dolgozó', user?.username],
-    ['Leírás',  leiras]
-  ]));
+
+  if(kepFile) {
+    const form = new FormData();
+    form.append('file', kepFile);
+    form.append('webhook', WH.jelentes);
+    form.append('title', `📊 Jelentés – ${cim}`);
+    form.append('description', `👷 **${user?.username}**\n${leiras}`);
+    try {
+      await fetch(WORKER + '/upload/image', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: form
+      });
+    } catch(e) { console.warn('Kép feltöltés hiba:', e); }
+  }
+
+  if(!kepFile) {
+    await sendWebhook(WH.jelentes, buildEmbed('📊 Új jelentés: '+cim, 0x6366f1, [
+      ['Dolgozó', user?.username],
+      ['Leírás',  leiras]
+    ]));
+  }
+
   document.getElementById('jelCim').value = '';
   document.getElementById('jelLeiras').value = '';
+  document.getElementById('jelKep').value = '';
   document.getElementById('jelPreview').style.display = 'none';
   showMsg('jelMsg','ok','✅ Jelentés beküldve!');
 }
